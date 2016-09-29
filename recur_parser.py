@@ -18,7 +18,7 @@ from grako.parsing import graken, Parser
 from grako.util import re, RE_FLAGS, generic_main  # noqa
 
 
-__version__ = (2016, 9, 26, 7, 29, 21, 0)
+__version__ = (2016, 9, 29, 7, 7, 31, 3)
 
 __all__ = [
     'UnknownParser',
@@ -89,6 +89,10 @@ class UnknownParser(Parser):
     def _atomic_constraint_(self):
         with self._choice():
             with self._option():
+                self._weekdayconstraint_()
+            with self._option():
+                self._monthdayconstraint_()
+            with self._option():
                 self._betweentimesofdayconstraint_()
             with self._option():
                 self._nintervalconstraint_()
@@ -97,9 +101,8 @@ class UnknownParser(Parser):
             with self._option():
                 self._timeofdayconstraint_()
             with self._option():
-                self._dayofmonthconstraint_()
-            with self._option():
                 self._aftertimeofdayconstraint_()
+            with self._option():
                 with self._group():
                     self._token('(')
                     self._and_constraint_()
@@ -158,8 +161,8 @@ class UnknownParser(Parser):
             with self._option():
                 self._token('other')
             with self._option():
-                self._pattern(r'\d[\d]th')
-            self._error('expecting one of: 1st 2nd 3rd \\d[\\d]th first other second third')
+                self._pattern(r'\d\d?th')
+            self._error('expecting one of: 1st 2nd 3rd \\d\\d?th first other second third')
 
     @graken()
     def _time_(self):
@@ -331,15 +334,16 @@ class UnknownParser(Parser):
     def _dates_(self):
 
         def block0():
-            self._date_()
-            self.add_last_node_to_name('@')
-            with self._optional():
-                with self._choice():
-                    with self._option():
-                        self._token('and')
-                    with self._option():
-                        self._token(', and')
-                    self._error('expecting one of: , and and')
+            with self._choice():
+                with self._option():
+                    self._date_()
+                    self.add_last_node_to_name('@')
+                    self._token(',')
+                with self._option():
+                    self._token('and')
+                with self._option():
+                    self._pattern(r', +and')
+                self._error('expecting one of: , +and and')
         self._positive_closure(block0)
 
     @graken()
@@ -542,42 +546,6 @@ class UnknownParser(Parser):
             self._error('no available options')
 
     @graken()
-    def _dayofmonthconstraint_(self):
-        with self._optional():
-            self._token('on the')
-
-        def block0():
-            self._dayofmonth_()
-            self.add_last_node_to_name('dayofmonthconstraint')
-            with self._optional():
-                with self._choice():
-                    with self._option():
-                        self._token(',')
-                    with self._option():
-                        self._token(', and')
-                    with self._option():
-                        self._token('and')
-                    with self._option():
-                        self._token('and the')
-                    with self._option():
-                        self._token(', and  the')
-                    self._error('expecting one of: , , and , and  the and and the')
-        self._positive_closure(block0)
-        with self._optional():
-            with self._choice():
-                with self._option():
-                    self._token('day of the month')
-                with self._option():
-                    self._token('of the month')
-                with self._option():
-                    self._token('days of the month')
-                self._error('expecting one of: day of the month days of the month of the month')
-        self.ast._define(
-            [],
-            ['dayofmonthconstraint']
-        )
-
-    @graken()
     def _nintervalconstraint_(self):
         with self._choice():
             with self._option():
@@ -616,6 +584,45 @@ class UnknownParser(Parser):
         self._token('on the ')
         self._ordinal_()
         self._token('day of the year')
+
+    @graken()
+    def _monthdayconstraint_(self):
+        self._token('on the')
+        self._ordinal_()
+        self.add_last_node_to_name('@')
+
+        def block1():
+            with self._optional():
+                self._token(',')
+            self._ordinal_()
+            self.add_last_node_to_name('@')
+        self._closure(block1)
+        with self._optional():
+            with self._optional():
+                self._token(',')
+            self._token('and')
+            self._ordinal_()
+            self.add_last_node_to_name('@')
+
+    @graken()
+    def _weekdayconstraint_(self):
+        with self._optional():
+            self._token('every')
+        self._weekday_()
+        self.add_last_node_to_name('@')
+
+        def block1():
+            with self._optional():
+                self._token(',')
+            self._weekday_()
+            self.add_last_node_to_name('@')
+        self._closure(block1)
+        with self._optional():
+            with self._optional():
+                self._token(',')
+            self._token('and')
+            self._weekday_()
+            self.add_last_node_to_name('@')
 
 
 class UnknownSemantics(object):
@@ -703,9 +710,6 @@ class UnknownSemantics(object):
     def betweentimesofdayconstraint(self, ast):
         return ast
 
-    def dayofmonthconstraint(self, ast):
-        return ast
-
     def nintervalconstraint(self, ast):
         return ast
 
@@ -716,6 +720,12 @@ class UnknownSemantics(object):
         return ast
 
     def yeardayconstraint(self, ast):
+        return ast
+
+    def monthdayconstraint(self, ast):
+        return ast
+
+    def weekdayconstraint(self, ast):
         return ast
 
 

@@ -16,13 +16,40 @@ def parseTime(s):
     return datetime.time(
     int(s.hour)+ (12 if s.ampm =="pm" else 0), int(s.minute) if s.minute else 0, int(s.second) if s.second else 0, s.ms*1000 if s.ms else 0)
 
+def parseWeekday(s):
+    return{
+    "mon":0, "monday":0,
+    "tue":1, "tuesday":1,
+    "wed":2, "wednesday":2,
+    "thu": 3, "thurs": 3,"thursday":3,
+    "fri":4, "friday":4,
+    'sat':5,"saturday":5,
+    "sun":6,"sunday":6
+    }[s.lower()]
+
 class semantics():
     "Each function here handles a rule in the PEG. Rules are handled bottom up"
     def nintervalconstraint(self, ast):
         n = parseOrdinal(ast[1])
         i = ast[2]
         return {
-        "minutes" : recur.minutely
+        "minute" : recur.minutely,
+        "minutes" : recur.minutely,
+
+        "hour" : recur.hourly,
+        "hours" : recur.hourly,
+
+        "day" : recur.daily,
+        "days" : recur.daily,
+
+        "second" : recur.secondly,
+        "seconds" : recur.secondly,
+
+        "month" : recur.monthly,
+        "months" : recur.monthly,
+
+        "year" : recur.yearly,
+        "years" : recur.yearly
         }[i](n)
 
     def constraint_list(self, ast):
@@ -52,6 +79,17 @@ class semantics():
     def yeardayconstraint(self, ast):
         return recur.yearday(parseOrdinal(ast[1]))
 
+    def monthdayconstraint(self,ast):
+        l = []
+        for i in ast:
+            l.append(parseOrdinal(i))
+        return recur.monthday(l)
+
+    def weekdayconstraint(self,ast):
+        l = []
+        for i in ast:
+            l.append(parseWeekday(i))
+        return recur.weekday(l)
 
 d = datetime.datetime(2016,9,26)
 def getConstraint(c):

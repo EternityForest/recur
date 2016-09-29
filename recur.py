@@ -1,119 +1,5 @@
 import datetime,unittest
 
-"""
-every hour
-every day
-every minute
-every second
-every week
-every <number> hours
-every <number> days
-every <number> minutes
-evert <number> seconds
-in <year>
-in <month>
-at <time>
-on <date>
-on <weekday>
-on the <number> of the month
-on the <number> <weekday> of the month
-between <time> and <time>
-
-<weekday> may be multiple as in "on Tuesday and Thursday" or "on Tuesday
-<weekday> may
-
-every ten minutes on thursday in 2014
-
-repeat: hour; weekday: sat, sun, mon; year: 2010 until 2012; month: jan; time: 8pm until 6am;
-minute:
-repeat, time, year, month, monthday, yearday, weekday, align
-
-([0-2]?[0-9])(:([0-5][0-9])?)(:([0-5][0-9])?)?(:([0-9]*)?)?(am|pm)?
-
-1: hour
-3: minute
-5: second
-7: fractional second
-8: am/pm
-
-([A-Za-z][A-Za-z][A-Za-z])?[ |\/]([0-3]?[0-9])[ |\/|[A-Za-z]]*?([0-9][0-9][0-9][0-9])
-
-1: month
-2: day
-3: year
-
-date="jan 1 2015 to jan 2 2040", time="7:50pm to 8:50pm", interval="5 seconds"
-
-start: jan 1 2010, weekday: 2 friday,  end: jan 1 2012
-
-RecurrenceRule(
-    start= (2015, 1, 8),
-    end  = (2017, 1, 9),
-    time = ,
-    dayofyear = [21]+range(0,60),
-    dayofweek = "fri",
-    dayofmonth = 8,
-    repeat = ("2", "weeks"),
-
-
-RecurRule:
-    start:
-        year: 2011
-    end:
-        year: 2012
-
-
-from kaithem_recurring import *
-
-scheduler = (
-WeekdayOfMonth(2, "friday") and
-Time(8:30) or Time(9:30) and
-Repeat(10, "seconds") and
-not TimeRange((9,30), (16:58))
-)
-
-"""
-
-
-"""
-API:
-
-This library represents repeating events as a series of constraints that each match a set of periods of time.
-Constraints are classes that may be AND and ORed together. Events are considered to occur at the very beginning
-of every matching period. For example, ig you want something to happen every monday:
-
-weekday(0)
-
-This creates a constraint that matches every monday. Since events happen at the start of periods, it will happen at midnight.
-
-If you want it to happen every hour:
-
-#Only the & symbol works, the keyword and does not.
-weekday(0) & hours(1)
-
-The hours(1) constraint matches every hour, hours(2) would match every other hour, etc.
-However even though every hour is matched it is still considered a separate match,
-so the event happens every hour, but only on monday.
-
-The hours constraint has one odd property, it is always "aligned" to the selected timezone hour
-
-List of available constraints:
-
-weekday(days)
-matches any of the weekdays in days where monday=0 and days is a list of ints or an int
-
-monthday(days)
-Match any of the days of the month where days is an int or list of ints
-
-timeofday(time)
-match the time of day where time is a datetime.time instance.
-
-Every monday at 2pm
-
-recur.weekday(0) & recur.timeofday( (14,00))
-"""
-
-
 
 def incrementByWeek(dt):
     dt = dt+dat
@@ -122,14 +8,36 @@ def list_or_int(t):
         return t
     else:
         return [t]
-
-
-
 def timeFromArgs(*args):
     if isinstance(args[0], datetime.time):
         return args[0]
     else:
         return datetime.time(*args)
+
+def dt_to_unix(dt):
+    return (dt - datetime.datetime(1970, 1, 1)).total_seconds()
+
+def asMinutes(dt):
+    return dt.minute+dt.hour*60+ (dt.toordinal()*24*60)
+
+def asHours(dt):
+    return dt.hour + dt.toordinal()*24
+
+def asMonths(dt):
+    return dt.month + dt.year*12
+
+def asYears(dt):
+    return  dt.year
+
+def asWeeks(dt):
+    return dt.toordinal()//7
+
+def dayOfYear(d):
+    "Given a datetime, get the day of year"
+    s = d.replace(day=1, hour=0,minute=0, second=0)
+    diff = d-s
+    return diff.days+1
+
 class BaseConstraint():
     "This is the base class for all constraints and constraint systems"
     def __init__(self):
@@ -166,6 +74,9 @@ class ORConstraint(BaseConstraint):
         a = self.a.after(time, inclusive)
         b = self.b.after(time, inclusive)
         return (a if a<b else b)
+
+
+
 
 class ConstraintSystem(BaseConstraint):
     """Class defining one event that repeats at times determined by a set of constraints,
@@ -219,7 +130,7 @@ class ConstraintSystem(BaseConstraint):
             else:
                 return True
 
-    def after(self,  time, inclusive=False):
+    def after(self,  time, inclusive=True,align=None):
         #Loop over n constraints n times
         if time==None:
             return None
@@ -228,14 +139,14 @@ class ConstraintSystem(BaseConstraint):
         if not inclusive:
             smallest = datetime.timedelta(days=99999)
             for i in self.constraints:
-                x = i.after(time, False)
+                x = i.after(time, False,align)
                 #If any constraint does not have a next, the whole system has no next, so return None
                 if not x:
                     return None
                 smallest = min(smallest, x-time)
 
-        #increment time to the first matching constraint
-        time += smallest
+            #increment time to the first matching constraint
+            time += smallest
 
         for i in range(0,500):
             #This gets set to false at the first non-match of an iteration
@@ -244,8 +155,7 @@ class ConstraintSystem(BaseConstraint):
             #If the time is not equal to the current time, then this time is not the next occurance of the total system.
             for i in self.constraints:
                 #Get either next occurance or start of this occurance
-                t = i.after(time,True)
-                print(t,i)
+                t = i.after(time,True,align)
                 #We check if time is less than or equal to t because constraints return the start of
                 #A time period if the time given is within an occurance if inclusive is true
                 if not t<=time:
@@ -259,12 +169,11 @@ class ConstraintSystem(BaseConstraint):
                     return None
             if x:
                 return time
-            print("")
         raise RuntimeError("Could not satisfy constraints in 500 iterations: "+repr(self.constraints))
 
 
 
-    def end(self,  time):
+    def end(self,  time,align=None):
         #Loop over n constraints n times
         if time==None:
             return None
@@ -273,7 +182,7 @@ class ConstraintSystem(BaseConstraint):
         if not inclusive:
             smallest = datetime.timedelta(days=99999)
             for i in self.constraints:
-                x = i.end(time, False)
+                x = i.end(time, False,align)
                 if not x:
                     return None
                 smallest = min(smallest, x-time)
@@ -284,7 +193,7 @@ class ConstraintSystem(BaseConstraint):
             x = True
             for i in self.constraints:
                 t = time
-                time = i.end(t)
+                time = i.end(t,align)
                 if not time==t:
                     x = False
 
@@ -303,16 +212,7 @@ class weekday(BaseConstraint):
         self.day = set(list_or_int(day))
         self.sort = (7*24*60*60)/len(self.day)
 
-
-    def start(self,dt):
-        if len(self.day>=7):
-            return None
-        while(1):
-            if not dt.weekday() in self.day:
-                return dt
-            dt = dt-datetime.timedelta(days=1).replace(hours=23, minute=59, second=59, microsecond=999999)
-
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         if not(self.day):
             return None
 
@@ -338,7 +238,7 @@ class hour(BaseConstraint):
         self.hour = set(list_or_int(hour))
         self.sort = (24*60*60)/len(self.hour)
 
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         if not(self.hour):
             return None
 
@@ -368,7 +268,7 @@ class time(BaseConstraint):
         self.time = timeFromArgs(*time)
         self.sort = 24*60*60
 
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         if not inclusive:
             dt= dt + datetime.timedelta(hours=1)
 
@@ -391,7 +291,7 @@ class aftertime(BaseConstraint):
     def __repr__(self):
         return "<aftertime "+str(self.time)+">"
 
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         #If it is after the time return current if we are inclusive
         if dt.time() >= self.time:
             if inclusive:
@@ -413,7 +313,7 @@ class beforetime(BaseConstraint):
         self.sort = 24*60*60
     def __repr__(self):
         return "<beforetime "+str(self.time)+">"
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         #If it is after the time return current if we are inclusive
         if dt.time() <= self.time:
             if inclusive:
@@ -439,134 +339,115 @@ def monthdelta(date, delta):
 
 
 
-class years(BaseConstraint):
-    """Matches every nth year, defaulting to 1 for every year"""
-    def __init__(self,interval=1, align=False):
+class yearly(BaseConstraint):
+    "Matches every Nth hour"
+    def __init__(self,interval=1):
+        "Match every nth year"
         self.interval = interval
-        self.align = align
-        self.sort = (24*60*60*356)
+        self.sort = interval*60*60*24*365
 
-    def after(self, dt, inclusive=True):
-        if self.align:
-            dt = dt.replace(month=1,day=1, hour=0, minute=0, second=0,microsecond=0)
-        if not inclusive:
-            dt = dt.replace(year=dt.year+self.interval)
+    def after(self,dt, inclusive=True, align = None ):
+        #Get how far past a multiple of the correct number  the first occurance was.
+        #That is our offset, when we Subtract that fron the current time, it should give the right result.
+        #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
+        align = align.year if align else 0
+        #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
+        dt_offset = dt.year - (align%(self.interval))
+
+        if inclusive and (dt_offset) % self.interval == 0:
+
+            #Get start of month. Return the actual time not our offset version
+            return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1,month=1)
         else:
-            return dt
+            #Increment to next match. We modulo the second of the current time with the interval,
+            #Then subtract the result from the interval to get the time left in this interval
+            #We do all this in our offset time space.
+            #Since the offset space is a constant factor away from real time, deltas valid in one are valid in the other.
 
-    def end(self, dt):
-        if self.align:
-            dt = dt.replace(month=1 ,day=1, hour=0, minute=0, second=0,microsecond=0)
+            return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1,month=1, year = dt.year+self.interval-((dt_offset) % self.interval))
 
-        return dt.replace(year=dt.year+self.interval)
+    def end(self,dt,align=None):
+        #Get start of minute. we already know we are in a match because that is a precondition of end
+        #So we just increment the minute
+        return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1,month=1,year=dt.year+1)
 
 
 
-class months(BaseConstraint):
-    """Matches every nth month, defaulting to 1 for every month"""
-    def __init__(self,interval=1, align=False):
+class monthly(BaseConstraint):
+    "Matches every Nth hour"
+    def __init__(self,interval=1):
+        "Match every nth month"
         self.interval = interval
-        self.align = align
-        self.sort = (24*60*60*30)
+        self.sort = interval*60*60*24*30*12
 
+    def after(self,dt, inclusive=True, align = None):
+        #Get how far past a multiple of the correct number  the first occurance was.
+        #That is our offset, when we Subtract that fron the current time, it should give the right result.
+        #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
 
-    def after(self, dt, inclusive=True):
-        if self.align:
-            dt = dt.replace(day=0, hour=0, minute=0, second=0,microsecond=0)
-        if not inclusive:
-            dt= monthdelta(dt,self.interval)
+        align =asMonths(align) if align else 0
+
+        #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
+        dt_offset = asMonths(dt) - (align%(self.interval))
+
+        if inclusive and (dt_offset) % self.interval == 0:
+
+            #Get start of hour. Return the actual time not our offset version
+            return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1)
         else:
-            return dt
+            #Increment to next match. We modulo the second of the current time with the interval,
+            #Then subtract the result from the interval to get the time left in this interval
+            #We do all this in our offset time space.
+            #Since the offset space is a constant factor away from real time, deltas valid in one are valid in the other.
 
-    def end(self, dt):
-        if self.align:
-            dt = dt.replace(day=0, hour=0, minute=0, second=0,microsecond=0)
+            dt = monthdelta(dt, self.interval-((dt_offset) % self.interval))
+            return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1)
 
-        return monthdelta(dt,1)
-
+    def end(self,dt,align=None):
+        #Get start of minute. we already know we are in a match because that is a precondition of end
+        #So we just increment the minute
+        return monthdelta(dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1),1)
 
 
 class weeks(BaseConstraint):
     """Matches every nth weeks, defaulting to 1 for every week"""
-    def __init__(self,interval=1, align=False):
+    def __init__(self,interval=1):
         self.interval = interval
-        self.align = align
         self.sort = (24*60*60)
 
-
-    def after(self, dt, inclusive=True):
-        if self.align:
+    def after(self, dt, inclusive=True,align=None):
+        if align:
             dt = dt.replace(day= dt.day-dt.weekday(), hour=0, minute=0, second=0,microsecond=0)
         if not inclusive:
             dt= dt + datetime.timedelta(days=self.interval*7)
         else:
             return dt
 
-    def end(self, dt):
-        if self.align:
+    def end(self, dt,align=None):
+        if align:
             dt = dt.replace(day= dt.day-dt.weekday(), hour=0, minute=0, second=0,microsecond=0)
 
         return dt + datetime.timedelta(days=self.interval*7)
 
 
-class days(BaseConstraint):
-    """Matches every nth day, defaulting to 1 for every day"""
-    def __init__(self,interval=1, align=False):
-        self.interval = interval
-        self.align = align
-        self.sort = (24*60*60)
-
-
-    def after(self, dt, inclusive=True):
-        if self.align:
-            dt = dt.replace(hour=0, minute=0, second=0,microsecond=0)
-        if not inclusive:
-            dt= dt + datetime.timedelta(days=self.interval)
-        else:
-            return dt
-
-    def end(self, dt):
-        if self.align:
-            dt = dt.replace(hour=0, minute=0, second=0,microsecond=0)
-
-        return dt + datetime.timedelta(days=self.interval)
-
-
-
-def dt_to_unix(dt):
-    return (dt - datetime.datetime(1970, 1, 1)).total_seconds()
-
-def asMinutes(dt):
-    return dt.minute+dt.hour*60+ (dt.toordinal()*24*60)
-
-def asHours(dt):
-    return dt.hour + dt.toordinal()*24
-
-def asMonths(dt):
-    return dt.month + dt.year*12
-
-def asYears(dt):
-    return  dt.year
-
-def asWeeks(dt):
-    return dt.toordinal()//7
 
 class minutely(BaseConstraint):
-    "Matches every Nth hour"
+    "Matches every Nth minute."
     def __init__(self,interval=1):
         "Match every nth second"
         self.interval = interval
         self.sort = interval*60
 
-    def after(self,dt, inclusive=True, align = datetime.datetime(1,1,1)):
+    def after(self,dt, inclusive=True, align = 0):
         #Get how far past a multiple of the correct number  the first occurance was.
         #That is our offset, when we Subtract that fron the current time, it should give the right result.
         #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
-        align =asMinutes(align)
+        align =asMinutes(align) if align else 0
 
+        #Subtract align from minute so that at align units we are at 0 in our offset timespace
         dt_offset = asMinutes(dt) - (align%(self.interval))
+
         if inclusive and (dt_offset) % self.interval == 0:
-            #Subtract align from minute so that at align minutes
             #Get start of hour. Return the actual time not our offset version
             return dt.replace(microsecond=0,second=0)
         else:
@@ -590,15 +471,16 @@ class secondly(BaseConstraint):
         self.interval = interval
         self.sort = interval
 
-    def after(self,dt, inclusive=True, align = datetime.datetime(1,1,1)):
+    def after(self,dt, inclusive=True, align = None):
         #Get how far past a multiple of the correct number  the first occurance was.
         #That is our offset, when we Subtract that fron the current time, it should give the right result.
         #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
-        align =dt_to_unix(align)
+        align =dt_to_unix(align) if align else 0
 
+        #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
         dt_offset = dt_to_unix(dt) - (align%(self.interval))
+
         if inclusive and (dt_offset) % self.interval == 0:
-            #Subtract align from minute so that at align minutes
             #Get start of hour. Return the actual time not our offset version
             return dt.replace(microsecond=0)
         else:
@@ -622,13 +504,15 @@ class hourly(BaseConstraint):
         self.interval = interval
         self.sort = interval*60*60
 
-    def after(self,dt, inclusive=True, align = datetime.datetime(1,1,1)):
+    def after(self,dt, inclusive=True, align = None):
         #Get how far past a multiple of the correct number of minutes the first occurance was.
         #That is our offset, when we Subtract that fron the current time, it should give the right result.
         #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
-        align =asHours(align)
+        align =asHours(align) if align else 0
 
+        #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
         dt_offset = asHours(dt) - (align%(self.interval))
+
         if inclusive and (dt_offset) % self.interval == 0:
             #Subtract align from minute so that at align minutes
             #Get start of hour. Return the actual time not our offset version
@@ -655,15 +539,16 @@ class daily(BaseConstraint):
         self.interval = interval
         self.sort = interval*60*60*24
 
-    def after(self,dt, inclusive=True, align = datetime.datetime(1,1,1)):
+    def after(self,dt, inclusive=True, align = None):
         #Get how far past a multiple of the correct number of minutes the first occurance was.
         #That is our offset, when we Subtract that fron the current time, it should give the right result.
         #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
-        align =align.toordinal()
+        align =align.toordinal() if align else 0
 
+        #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
         dt_offset = dt.toordinal() - (align%(self.interval))
+
         if inclusive and (dt_offset) % self.interval == 0:
-            #Subtract align from minute so that at align minutes
             #Get start of hour. Return the actual time not our offset version
             return dt.replace(microsecond=0,second=0,minute=0,hour=0)
         else:
@@ -684,16 +569,27 @@ class daily(BaseConstraint):
 class monthday(BaseConstraint):
     "Match one day or list of days in every month, such as the 12th of every month."
     def __init__(self,day):
-        self.day = set(list_or_int(day))
+        self.day = sorted(list_or_int(day))
         self.sort = (24*30*60*60)/len(self.day)
 
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         if not self.day:
             return None
 
         if not inclusive:
             dt= dt+datetime.timedelta(days=1)
 
+        #If we are past the last in the list of matching days
+        if dt.day > self.day[-1]:
+            while 1:
+                dt = dt.replace(day=self.day[0], hour=0, minute=0,second=0, microsecond=0)
+                #Monthdelta saturates at the last day of the month o=if the current day is higher than next month has in days.
+                #So, we have to keep checking until we find a matching month
+                dt = monthdelta(dt,1)
+                if dt.day == self.day[0]:
+                    return dt
+
+        #Just increment by day until we find a match
         while(1):
             if dt.day in self.day:
                 return dt.replace(hour=0, minute=0,second=0, microsecond=0)
@@ -746,7 +642,7 @@ class weekdayofmonth(BaseConstraint):
         self.weekday = weekday
         self.sort = 30*24*60*60
 
-    def after(self, dt, inclusive=True):
+    def after(self, dt, inclusive=True,align=None):
         dt = dt.replace(hour=0,minute=0,second=0, microsecond=0)
         if not inclusive:
             dt+= datetime.timedelta(days=1)
@@ -775,7 +671,7 @@ class date(BaseConstraint):
         self.month = month
         self.sort = (24*365*60*60)
 
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         if not inclusive:
             dt= dt+datetime.timedelta(days=1)
 
@@ -796,11 +692,7 @@ class date(BaseConstraint):
                 dt= dt+datetime.timedelta(days=1)
 
 
-def dayOfYear(d):
-    "Given a datetime, get the day of year"
-    s = d.replace(day=1, hour=0,minute=0, second=0)
-    diff = d-s
-    return diff.days+1
+
 
 class yearday(BaseConstraint):
     "Match a day of the year given as a number"
@@ -808,7 +700,7 @@ class yearday(BaseConstraint):
         self.day = set(list_or_int(day))
         self.sort = (24*365*60*60)/len(self.day)
 
-    def after(self,dt, inclusive=True):
+    def after(self,dt, inclusive=True,align=None):
         if not self.day:
             return None
 

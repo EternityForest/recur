@@ -1,18 +1,153 @@
 import recur_parser, recur
 import datetime
+import time as tt
 from recur_dsl import *
 from recur import *
 p = recur_parser.UnknownParser()
 
 
-d = datetime.datetime(2016,9,26)
+
+
+class Teststringweekdays(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every thursday")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,28,1,9))
+        y= datetime.datetime(2016,9,29)
+        self.assertEqual(x,y)
+
+    def test_not_there2(self):
+        x = self.d.after(datetime.datetime(2016,9,27,1,9))
+        y= datetime.datetime(2016,9,29)
+        self.assertEqual(x,y)
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2016,9,29,1,9))
+        y= datetime.datetime(2016,9,29)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2016,9,29,1,9),False)
+        y= datetime.datetime(2016,10,6)
+        self.assertEqual(x,y)
+
+
+class Teststringmonths(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every 3 months")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2015,1,1,1,9))
+        y= datetime.datetime(2015,3,1)
+        self.assertEqual(x,y)
+
+    def test_not_there_2(self):
+        x = self.d.after(datetime.datetime(2015,2,1))
+        y= datetime.datetime(2015,3,1)
+        self.assertEqual(x,y)
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2015,3,1))
+        y= datetime.datetime(2015,3,1)
+        self.assertEqual(x,y)
+
+
+
+class TestStringMonthDay(unittest.TestCase):
+    def setUp(self):
+        self.d= getConstraint("on the 3rd day of the month")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2015,9,1,0,3))
+        y= datetime.datetime(2015,9,3)
+        self.assertEqual(x,y)
+
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2015,9,3))
+        y= datetime.datetime(2015,9,3)
+        self.assertEqual(x,y)
+
+
+    def test_past(self):
+        x = self.d.after(datetime.datetime(2015,11,7))
+        y= datetime.datetime(2015,12,3)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2015,9,3,5),inclusive=False)
+        y= datetime.datetime(2015,10,3)
+        self.assertEqual(x,y)
+
+
+class TestStringMonthDays(unittest.TestCase):
+    def setUp(self):
+        self.d= getConstraint("on the 3rd and 4th day of the month")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2015,9,1,0,3))
+        y= datetime.datetime(2015,9,3)
+        self.assertEqual(x,y)
+
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2015,9,3))
+        y= datetime.datetime(2015,9,3)
+        self.assertEqual(x,y)
+
+
+    def test_already_there2(self):
+        x = self.d.after(datetime.datetime(2015,11,4))
+        y= datetime.datetime(2015,11,4)
+        self.assertEqual(x,y)
+
+    def test_past(self):
+        x = self.d.after(datetime.datetime(2015,11,7))
+        y= datetime.datetime(2015,12,3)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2015,9,4,5),inclusive=False)
+        y= datetime.datetime(2015,10,3)
+        self.assertEqual(x,y)
+
+
+class TestStringMonthDays2(unittest.TestCase):
+    def setUp(self):
+        self.d= getConstraint("on the 28th, 27th, and 14th day of the month")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2015,9,10,0,3))
+        y= datetime.datetime(2015,9,14)
+        self.assertEqual(x,y)
+
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2015,9,14))
+        y= datetime.datetime(2015,9,14)
+        self.assertEqual(x,y)
+
+
+    def test_already_there2(self):
+        x = self.d.after(datetime.datetime(2015,11,14))
+        y= datetime.datetime(2015,11,14)
+        self.assertEqual(x,y)
+
+    def test_past(self):
+        x = self.d.after(datetime.datetime(2015,11,29))
+        y= datetime.datetime(2015,12,14)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2015,10,14),inclusive=False)
+        y= datetime.datetime(2015,10,27)
+        self.assertEqual(x,y)
 
 
 class TestString5min(unittest.TestCase):
     def setUp(self):
-        #Constraint is wed
         self.d= getConstraint("every 5 minutes")
-        print(self.d)
 
     def test_not_there(self):
         #That'sa tue, we want next wed
@@ -31,11 +166,9 @@ class TestString5min(unittest.TestCase):
 
 class Test5secs(unittest.TestCase):
     def setUp(self):
-        #Constraint is wed
         self.d= secondly(5)
 
     def test_not_there(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,2,2,2,3))
         y= datetime.datetime(2015,9,2,2,2,5)
         self.assertEqual(x,y)
@@ -46,7 +179,6 @@ class Test5secs(unittest.TestCase):
         self.assertEqual(x,y)
 
     def test_exclusive(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,2,6,5,5),inclusive=False)
         y= datetime.datetime(2015,9,2,6,5,10)
         self.assertEqual(x,y)
@@ -58,11 +190,9 @@ class Test5secs(unittest.TestCase):
 
 class Test5mins(unittest.TestCase):
     def setUp(self):
-        #Constraint is wed
         self.d= minutely(5)
 
     def test_not_there(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,2,2,2))
         y= datetime.datetime(2015,9,2,2,5)
         self.assertEqual(x,y)
@@ -73,7 +203,6 @@ class Test5mins(unittest.TestCase):
         self.assertEqual(x,y)
 
     def test_exclusive(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,2,6,5),inclusive=False)
         y= datetime.datetime(2015,9,2,6,10)
         self.assertEqual(x,y)
@@ -85,11 +214,9 @@ class Test5mins(unittest.TestCase):
 
 class Test6Hours(unittest.TestCase):
     def setUp(self):
-        #Constraint is wed
-        self.d= hourly(6)
+                self.d= hourly(6)
 
     def test_not_there(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,2,2))
         y= datetime.datetime(2015,9,2,6)
         self.assertEqual(x,y)
@@ -100,7 +227,6 @@ class Test6Hours(unittest.TestCase):
         self.assertEqual(x,y)
 
     def test_exclusive(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,2,6),inclusive=False)
         y= datetime.datetime(2015,9,2,12)
         self.assertEqual(x,y)
@@ -112,23 +238,19 @@ class Test6Hours(unittest.TestCase):
 
 class TestDOWConstraintWed(unittest.TestCase):
     def setUp(self):
-        #Constraint is wed
-        self.d = weekday([2])
+                self.d = weekday([2])
 
     def test_not_there(self):
-        #That'sa tue, we want next wed
         x = self.d.after(datetime.datetime(2015,9,1,1,9))
         y= datetime.datetime(2015,9,2)
         self.assertEqual(x,y)
 
     def test_not_there_2(self):
-        #That'sa sat, we want next wed
         x = self.d.after(datetime.datetime(2015,8,29))
         y= datetime.datetime(2015,9,2)
         self.assertEqual(x,y)
 
     def test_already_there(self):
-        #That'sa wed, we want next wed
         x = self.d.after(datetime.datetime(2015,9,9,5,34))
         y= datetime.datetime(2015,9,9)
         self.assertEqual(x,y)
@@ -228,6 +350,28 @@ class TestDOYConstraint(unittest.TestCase):
         x = self.d.after(datetime.datetime(2015,1,5,5,34))
         y= datetime.datetime(2015,1,5)
         self.assertEqual(x,y)
+
+
+
+class Test(unittest.TestCase):
+    def setUp(self):
+        self.d = monthly(3)
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2015,1,1,1,9))
+        y= datetime.datetime(2015,3,1)
+        self.assertEqual(x,y)
+
+    def test_not_there_2(self):
+        x = self.d.after(datetime.datetime(2015,2,1))
+        y= datetime.datetime(2015,3,1)
+        self.assertEqual(x,y)
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2015,3,1))
+        y= datetime.datetime(2015,3,1)
+        self.assertEqual(x,y)
+
 
 class Testhour(unittest.TestCase):
     def setUp(self):
@@ -383,4 +527,55 @@ class TestgetNthWeekday(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    import cProfile, pstats, io
+    pr = cProfile.Profile()
+    pr.enable()
+    t = tt.time()
+    c = getConstraint("every 2 months every 5 minutes")
+    dt = datetime.datetime(2011,5,8)
+    for i in range(0,1000):
+        c.after(dt)
+        #dt += +datetime.timedelta(days=7)
+    print("1000 iterations of 'every 2 months every 5 minutes' in "+str((tt.time()-t)*1000)+"us per iteration")
+
+    t = tt.time()
+    c = getConstraint(" every 7 minutes")
+    dt = datetime.datetime(2011,5,8)
+    for i in range(0,1000):
+        c.after(dt)
+        #dt += +datetime.timedelta(days=7)
+    print("1000 iterations of 'every 7 minutes' in "+str((tt.time()-t)*1000)+"us per iteration")
+
+
+    t = tt.time()
+    c = getConstraint(" every 7 minutes every 15 months")
+    dt = datetime.datetime(2011,5,8)
+    for i in range(0,1000):
+        c.after(dt)
+        #dt += +datetime.timedelta(days=7)
+    print("1000 iterations of 'every 7 minutes every 15 months' in "+str((tt.time()-t)*1000)+"us per iteration")
+
+    t = tt.time()
+    c = getConstraint(" every 7 minutes every 40 minutes")
+    dt = datetime.datetime(2011,5,8)
+    for i in range(0,1000):
+        c.after(dt)
+        #dt += +datetime.timedelta(days=7)
+    print("1000 iterations of 'every 7 minutes every 40 minutes' in "+str((tt.time()-t)*1000)+"us per iteration")
+
+    t = tt.time()
+    c = getConstraint("every 20 minutes every sunday and tuesday")
+    dt = datetime.datetime(2011,5,8)
+    for i in range(0,1000):
+        c.after(dt)
+        #dt += +datetime.timedelta(days=7)
+    print("1000 iterations of 'every 20 minutes every sunday and tuesday' in "+str((tt.time()-t)*1000)+"us per iteration")
+
+
+    pr.disable()
+    s = io.StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print (s.getvalue())
     unittest.main()
