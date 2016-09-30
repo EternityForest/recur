@@ -2,6 +2,23 @@ import recur_parser, recur
 import datetime
 p = recur_parser.UnknownParser()
 
+
+def parseDateTimeWithYearWithDefaults(s):
+    "This accepts lots and lots of default options for no real reason other than to handle the starting at alignments"
+    t = s.time
+    d = s.date
+    #Handles things like every 2 weeks starting on monday
+    if s.weekday:
+        return datetime.datetime.fromordinal(1+parseWeekday(s.weekday))
+    return datetime.datetime(
+     year=int(d.year) if d and d.year else 1,
+     month=parseMonth(d.month) if d and d.month else 1,
+     day= int(d.dayofmonth) if d and d.dayofmonth else 1,
+     minute=int(t.minute) if t and t.minute else 0,
+     hour = int(t.hour) if t and t.hour else 0,
+     second=int(t.second) if t and t.second else 0,
+     microsecond=int(t.millisecond)*1000 if t and t.millisecond else 0)
+
 def parseOrdinal(s):
     "Given either an int or a string like '1', '1st','10th', etc; return an int"
     o = {'other':2,"first":1,"1st":1,"second":2,"2nd":2,"third":3,"3rd":3}
@@ -27,6 +44,22 @@ def parseWeekday(s):
     "sun":6,"sunday":6
     }[s.lower()]
 
+def parseMonth(s):
+    return{
+    "jan":1, "january":1,
+    "feb":2, "february":2,
+    "mar":3, "march":3,
+    "apr":4, "april":1,
+    "may":5,
+    "jun":6, "june":6,
+    "jul":7, "july":7,
+    "aug":8, "august":8,
+    "sep":9, "september":9,
+    "oct":10, "october":10,
+    "nov":11, "november":11,
+    "dec":12, "december":12
+    }[s.lower()]
+
 class semantics():
     "Each function here handles a rule in the PEG. Rules are handled bottom up"
     def nintervalconstraint(self, ast):
@@ -49,8 +82,14 @@ class semantics():
         "months" : recur.monthly,
 
         "year" : recur.yearly,
-        "years" : recur.yearly
+        "years" : recur.yearly,
+
+        "week": recur.weekly,
+        "weeks": recur.weekly
         }[i](n)
+
+    def startingat(self,ast):
+        self.align = parseDateTimeWithYearWithDefaults(ast)
 
     def constraint_list(self, ast):
         x = ast
@@ -92,5 +131,9 @@ class semantics():
         return recur.weekday(l)
 
 d = datetime.datetime(2016,9,26)
+
 def getConstraint(c):
-    return p.parse(c, rule_name="start",semantics = semantics())
+    s = semantics()
+    c= p.parse(c, rule_name="start",semantics =s )
+    a = s.align if hasattr(s,"align") else None
+    return recur.Selector(c, a)

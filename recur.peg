@@ -1,10 +1,10 @@
 
 
 
-start =and_constraint;
+start =and_constraint [startingat];
 #Basic stuff to do with how constraints are combined
-atomic_constraint = weekdayconstraint|monthdayconstraint|betweentimesofdayconstraint|nintervalconstraint|yeardayconstraint|
-                    timeofdayconstraint|aftertimeofdayconstraint|startingat|
+atomic_constraint = nintervalconstraint|weekdayconstraint|monthdayconstraint|betweentimesofdayconstraint|yeardayconstraint|
+                    timeofdayconstraint|aftertimeofdayconstraint|
                     ('(' and_constraint ')')|except_constraint;
 
 constraint_list = {atomic_constraint}+;
@@ -24,12 +24,12 @@ millisecond = /\d\d\d\d/;
 year = /\d\d\d\d/;
 month = 'jan'|'january'|'feb'|'february'|'mar'|'march'|'apr'|'april'|'may'|'jun'|'june'|'jul'|'july'|'aug'|'august'|'sep'|
         'september'| 'nov'| 'november'|'dec'|'december';
-dayofmonth = ordinal| /\d\d/;
-date = (month dayofmonth) | (dayofmonth month) | ('the' dayofmonth 'of' month);
+dayofmonth = ordinal| /\d\d?/;
+date = (month:month dayofmonth:dayofmonth) | (dayofmonth:dayofmonth month:month) | ('the' dayofmonth:dayofmonth 'of' month:month);
 dates = {@+:date ','|"and"|/, +and/}+;
-datewithyear = (month dayofmonth year) | (dayofmonth month year);
-datetime = (time date)| (time 'on' date) | (date 'at' time);
-datetimewithyear = (time date year)| (time 'on' date year) | (date year 'at' time );
+datewithyear = (month:month dayofmonth:dayofmonth year:year) | (dayofmonth:dayofmonth month:month year:year);
+datetime = (time:time date:date)| (time:time 'on' date:date) | (date:date 'at' time:time);
+datetimewithyear = (time:time date:datewithyear)| (time:time 'on' date:datewithyear) | (date:datewithyear 'at' time:time )| date:datewithyear;
 timeofdayrange = ('between' time 'and' time)| ('from' time 'to' time)| (time 'to' time);
 interval = 'week'|'month'|'year'|'day'|'hour'|'minute'|'second'|'ms'|'millisecond';
 intervals = 'weeks'|'months'|'years'|'days'|'hours'|'minutes'|'seconds'|'ms'|'milliseconds';
@@ -39,7 +39,7 @@ weekday = 'mon'|'monday'|'tue'|'tuesday'|'wed'|'wednesday'|'thu'|'thursday'|'fri
 timeofdayconstraint = ['at'] timeofdayconstraint:times;
 aftertimeofdayconstraint = 'after' aftertimeofdayconstraint:time;
 betweentimesofdayconstraint = ('between' @+:time 'and' @+:time)| ('from' @+:time 'to' @+:time);
-nintervalconstraint = ('every' integer intervals)| ('every ordinal interval');
+nintervalconstraint = ('every' integer intervals) | ('every' ordinal interval);
 dateconstraint = (["on"] dates) | ('every year on') date;
 datewithyearconstraint = (["on"] datewithyear);
 yeardayconstraint = "on the " ordinal "day of the year";
@@ -47,4 +47,4 @@ monthdayconstraint = "on the"  @+:ordinal {[','] @+:ordinal} [[',']'and'  @+:ord
 weekdayconstraint  = ['every'] @+:weekday {[','] @+:weekday} [[',']'and'  @+:weekday];
 
 #Directives
-startingat = "starting" ['at'|'on'] datetimewithyear;
+startingat = ("starting" ['at'|'on'] @:datetimewithyear) |"starting on" weekday:weekday;
