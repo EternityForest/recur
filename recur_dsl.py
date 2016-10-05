@@ -62,6 +62,13 @@ def parseMonth(s):
 
 class semantics():
     "Each function here handles a rule in the PEG. Rules are handled bottom up"
+
+    def syntax_error(self,ast):
+        raise ValueError("Unexpected token[s]:" + str(ast))
+
+    def forconstraint(self,ast):
+        return ForConstraint(ast.const, ast.len
+        )
     def nintervalconstraint(self, ast):
         n = parseOrdinal(ast[1])
         i = ast[2]

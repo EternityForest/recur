@@ -7,13 +7,88 @@ p = recur_parser.UnknownParser()
 
 
 
+
+class Testaligndateminutes(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_syntax_error(self):
+        try:
+            getConstraint("every 5 minutes")
+            self.assertTrue(False)
+        except ValueError as e:
+            print(e)
+            self.assertTrue(True)
+
+
+class Testaligndateminutes(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every 5 minutes for 10")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,12))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
+    def test_not_there2(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,15))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
+    def test_almost_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,14,58,999999))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
+    def test_almost_there2(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,14,54,999999))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
+    def test_already_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,15,7))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,15),False)
+        y= datetime.datetime(2016,9,6,2,20)
+        self.assertEqual(x,y)
+
+    def test_end(self):
+        x = self.d.end(datetime.datetime(2016,9,6,2,15,6))
+        y= datetime.datetime(2016,9,6,2,15,10)
+        self.assertEqual(x,y)
+
 class Testaligndatedays(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("every 6 days starting on september 6 2016 at 2:15pm")
 
+    def test_before_almost_there(self):
+        x = self.d.before(datetime.datetime(2016,9,6,2,12))
+        y= datetime.datetime(2016,8,31,2,15)
+        self.assertEqual(x,y)
+
+
+    def test_after_as_used_in_before_almost_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,12)-datetime.timedelta(days=6))
+        y= datetime.datetime(2016,8,31,2,15)
+        self.assertEqual(x,y)
+
+
+    def test_before(self):
+        x = self.d.before(datetime.datetime(2016,9,5))
+        y= datetime.datetime(2016,8,31,2,15)
+        self.assertEqual(x,y)
+
+    def test_before_inside(self):
+        x = self.d.before(datetime.datetime(2016,9,6,2,17))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
     def test_almost_there(self):
         x = self.d.after(datetime.datetime(2016,9,6,2,12))
-        y= datetime.datetime(2016,9,12,2,15)
+        y= datetime.datetime(2016,9,6,2,15)
         self.assertEqual(x,y)
 
     def test_almost_there2(self):

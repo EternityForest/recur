@@ -18,7 +18,7 @@ from grako.parsing import graken, Parser
 from grako.util import re, RE_FLAGS, generic_main  # noqa
 
 
-__version__ = (2016, 9, 30, 2, 37, 10, 4)
+__version__ = (2016, 10, 5, 2, 46, 34, 2)
 
 __all__ = [
     'UnknownParser',
@@ -86,10 +86,14 @@ class UnknownParser(Parser):
         self._and_constraint_()
         with self._optional():
             self._startingat_()
+        with self._optional():
+            self._syntax_error_()
 
     @graken()
     def _atomic_constraint_(self):
         with self._choice():
+            with self._option():
+                self._forconstraint_()
             with self._option():
                 self._nintervalconstraint_()
             with self._option():
@@ -112,6 +116,10 @@ class UnknownParser(Parser):
             with self._option():
                 self._except_constraint_()
             self._error('no available options')
+
+    @graken()
+    def _syntax_error_(self):
+        self._pattern(r'[.\w]+')
 
     @graken()
     def _constraint_list_(self):
@@ -140,6 +148,33 @@ class UnknownParser(Parser):
     def _except_constraint_(self):
         self._token('except')
         self._atomic_constraint_()
+
+    @graken()
+    def _forconstraint_(self):
+        self._atomic_constraint_()
+        self._token('for')
+        self._integer_()
+
+    @graken()
+    def _timeinterval_(self):
+        self._number_()
+        with self._group():
+            with self._choice():
+                with self._option():
+                    self._token('seconds')
+                with self._option():
+                    self._token('minutes')
+                with self._option():
+                    self._token('hours')
+                with self._option():
+                    self._token('days')
+                with self._option():
+                    self._token('weeks')
+                self._error('expecting one of: days hours minutes seconds weeks')
+
+    @graken()
+    def _number_(self):
+        self._pattern(r'\d+[\.]\d+')
 
     @graken()
     def _integer_(self):
@@ -173,24 +208,6 @@ class UnknownParser(Parser):
                 with self._group():
                     self._hour_()
                     self.name_last_node('hour')
-                    self._token(':')
-                    self._minute_()
-                    self.name_last_node('minute')
-                    with self._optional():
-                        with self._optional():
-                            with self._group():
-                                self._token(':')
-                                self._second_()
-                                self.name_last_node('second')
-                            with self._optional():
-                                with self._group():
-                                    self._token(':')
-                                    self._millisecond_()
-                                    self.name_last_node('ms')
-            with self._option():
-                with self._group():
-                    self._hour_()
-                    self.name_last_node('hour')
                     with self._optional():
                         with self._optional():
                             with self._group():
@@ -215,6 +232,24 @@ class UnknownParser(Parser):
                                 self._token('pm')
                             self._error('expecting one of: am pm')
                     self.name_last_node('ampm')
+            with self._option():
+                with self._group():
+                    self._hour_()
+                    self.name_last_node('hour')
+                    self._token(':')
+                    self._minute_()
+                    self.name_last_node('minute')
+                    with self._optional():
+                        with self._optional():
+                            with self._group():
+                                self._token(':')
+                                self._second_()
+                                self.name_last_node('second')
+                            with self._optional():
+                                with self._group():
+                                    self._token(':')
+                                    self._millisecond_()
+                                    self.name_last_node('ms')
             self._error('no available options')
         self.ast._define(
             ['ampm', 'hour', 'minute', 'ms', 'second'],
@@ -647,6 +682,8 @@ class UnknownParser(Parser):
             self._token('and')
             self._ordinal_()
             self.add_last_node_to_name('@')
+        with self._optional():
+            self._token('day of the month')
 
     @graken()
     def _weekdayconstraint_(self):
@@ -701,6 +738,9 @@ class UnknownSemantics(object):
     def atomic_constraint(self, ast):
         return ast
 
+    def syntax_error(self, ast):
+        return ast
+
     def constraint_list(self, ast):
         return ast
 
@@ -708,6 +748,15 @@ class UnknownSemantics(object):
         return ast
 
     def except_constraint(self, ast):
+        return ast
+
+    def forconstraint(self, ast):
+        return ast
+
+    def timeinterval(self, ast):
+        return ast
+
+    def number(self, ast):
         return ast
 
     def integer(self, ast):

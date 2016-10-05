@@ -64,8 +64,13 @@ class Selector():
         "Encapsulates both a selector and it's start time alignments"
         self.constraint=constraint
         self.align = align
+
+    def before(self,dt):
+        return self.constraint.before(dt,self.align)
+
     def after(self,dt, inclusive=True):
         return self.constraint.after(dt,inclusive,self.align)
+
     def end(self,dt, inclusive=True):
         return self.constraint.end(dt,self.align)
 
@@ -104,8 +109,14 @@ class ORConstraint(BaseConstraint):
     def after(self, time, inclusive=True):
         a = self.a.after(time, inclusive)
         b = self.b.after(time, inclusive)
-        return (a if a<b else b)
+        if a and b:
+            return (a if a<b else b)
 
+    def before(self, time):
+        a = self.a.before(time, inclusive)
+        b = self.b.before(time, inclusive)
+        if a and b:
+            return (a if a>b else b)
 
 
 
@@ -202,6 +213,31 @@ class ConstraintSystem(BaseConstraint):
                 return time
         raise RuntimeError("Could not satisfy constraints in 500 iterations: "+repr(self.constraints))
 
+    def before(self,  time, align=None):
+        #Loop over n constraints n times
+        if time==None:
+            return None
+        for i in range(0,500):
+            #This gets set to false at the first non-match of an iteration
+            x = True
+            #For each constraint, get the next occurance after our current time.
+            #If the time is not equal to the current time, then this time is not the next occurance of the total system.
+            for i in self.constraints:
+                #Get either prev occurance or start of this occurance
+                t = i.before(time,True,align)
+                print(i,time, t)
+                if not t==time:
+                    x = False
+                #time is a var that only moves forwar until we find one that matches everything. Moving backwards
+                #Would make an infinite loop in some cases
+                if t < time:
+                    time = t
+                #If any constraint has no next, return None
+                if time==None:
+                    return None
+            if x:
+                return time
+        raise RuntimeError("Could not satisfy constraints in 500 iterations: "+repr(self.constraints))
 
 
     def end(self,  time,align=None):
@@ -385,6 +421,11 @@ class yearly(BaseConstraint):
             return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour,
             day=aligndt.day, month=aligndt.month, year = dt.year+self.interval-((dt_offset) % self.interval))
 
+    def before(self, dt, align=None):
+        #Abuse monthdelta to fix invalid dates that happen when going bacwards from a leap year
+        dt = monthdelta(dt.replace(year=dt.year-self.interval),0)
+        return(self.after(dt,True,align))
+
     def end(self,dt,align=None):
         aligndt = align if align else day1
         return self.after(dt,True,align).replace(year=dt.year+1)
@@ -441,7 +482,8 @@ class monthly(BaseConstraint):
         dt = monthdelta(dt,self.interval-(dt_offset%self.interval))
         return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour,day=min(daysInMonth(dt),aligndt.day))
 
-
+    def before(self, dt, align=None):
+        return(self.after(monthdelta(dt,-self.interval),True,align))
     def end(self,dt,align=None):
         #Get start of minute. we already know we are in a match because that is a precondition of end
         #So we just increment the minute
@@ -480,6 +522,10 @@ class weekly(BaseConstraint):
             dt += datetime.timedelta(days=self.interval-((dt_offset) % self.interval))
             return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour)
 
+    def before(self, dt, align=None):
+        dt = dt-datetime.timedelta(days=7*self.interval)
+        return(self.after(dt,True,align))
+
     def end(self,dt,align=None):
         return self.after(dt,True,align)+datetime.timedelta(days=7)
 
@@ -500,7 +546,7 @@ class daily(BaseConstraint):
                 return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour)
 
         else:
-            dt_offset_logical = asMonths(dt-datetime.timedelta(hours=aligndt.hour, minutes=aligndt.minute, seconds=aligndt.second, microseconds=aligndt.microsecond)) - (align%(self.interval))
+            dt_offset_logical = (dt-datetime.timedelta(hours=aligndt.hour, minutes=aligndt.minute, seconds=aligndt.second, microseconds=aligndt.microsecond)).toordinal() - align%(self.interval)
 
             if abs(dt_offset_logical-dt_offset)>1:
                 dt_offset_logical+=1
@@ -514,6 +560,12 @@ class daily(BaseConstraint):
         dt = dt+datetime.timedelta(days=self.interval-(dt_offset%self.interval))
         return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour)
 
+    def before(self, dt, align=None):
+        x= self.after(dt, True, align)
+        if x<=dt:
+            return x
+        dt = dt-datetime.timedelta(days=self.interval)
+        return(self.after(dt,True, align))
 
     def end(self,dt,align=None):
         aligndt = align if align else day1
@@ -551,6 +603,13 @@ class hourly(BaseConstraint):
             dt += datetime.timedelta(hours=self.interval-((dt_offset) % self.interval))
             return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute)
 
+    def before(self, dt, align=None):
+        x= self.after(dt, True, align)
+        if x<=dt:
+            return x
+        dt = dt-datetime.timedelta(hours=self.interval)
+        return(self.after(dt,True, align))
+
     def end(self,dt,align=None):
         return self.after(dt,True,align)+datetime.timedelta(hours=1)
 
@@ -580,7 +639,7 @@ class minutely(BaseConstraint):
                 return datetime.datetime(dt.year,dt.month,dt.day,dt.hour,dt.minute,aligndt.second,aligndt.microsecond)
 
         else:
-            dt_offset_logical = asMonths(dt-datetime.timedelta(seconds=aligndt.second, microseconds=aligndt.microsecond)) - (align%(self.interval))
+            dt_offset_logical = asMinutes(dt-datetime.timedelta(seconds=aligndt.second, microseconds=aligndt.microsecond)) - (align%(self.interval))
 
             if abs(dt_offset_logical-dt_offset)>1:
                 dt_offset_logical+=1
@@ -594,6 +653,12 @@ class minutely(BaseConstraint):
         dt = dt+datetime.timedelta(minutes=self.interval-(dt_offset%self.interval))
         return datetime.datetime(dt.year,dt.month,dt.day,dt.hour,dt.minute,aligndt.second,aligndt.microsecond)
 
+    def before(self, dt, align=None):
+        x= self.after(dt, True, align)
+        if x<=dt:
+            return x
+        dt = dt-datetime.timedelta(minutes=self.interval)
+        return(self.after(dt,True, align))
 
     def end(self,dt,align=None):
         aligndt = align if align else day1
@@ -629,6 +694,13 @@ class secondly(BaseConstraint):
 
             dt += datetime.timedelta(seconds=self.interval-((dt_offset) % self.interval))
             return dt.replace(microsecond=aligndt.microsecond)
+
+    def before(self, dt, align=None):
+        x= self.after(dt, True, align)
+        if x<=dt:
+            return x
+        dt = dt-datetime.timedelta(seconds=self.interval)
+        return(self.after(dt,True, align))
 
     def end(self,dt,align=None):
         return self.after(dt,True,align)+datetime.timedelta(seconds=1)
