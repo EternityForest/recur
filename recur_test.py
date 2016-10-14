@@ -318,29 +318,29 @@ class Testaligndate(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("every 1 weeks starting on september 6 2016")
 
-    def test_not_there(self):
+    def test(self):
         x = self.d.after(datetime.datetime(2016,9,26,1,9))
-        y= datetime.datetime(2016,9,27)
+        y= datetime.datetime(2016,9,20)
         self.assertEqual(x,y)
 
-    def test_not_there2(self):
+    def test2(self):
         x = self.d.after(datetime.datetime(2016,9,25,1,9))
-        y= datetime.datetime(2016,9,27)
+        y= datetime.datetime(2016,9,20)
         self.assertEqual(x,y)
 
-    def test_already_there(self):
+    def test3(self):
         x = self.d.after(datetime.datetime(2016,9,27,1,7))
         y= datetime.datetime(2016,9,27)
         self.assertEqual(x,y)
 
-    def test_almost_over(self):
+    def test4(self):
         x = self.d.after(datetime.datetime(2016,9,26,23,59))
-        y= datetime.datetime(2016,9,27)
+        y= datetime.datetime(2016,9,20)
         self.assertEqual(x,y)
 
     def test_almost_over(self):
         x = self.d.after(datetime.datetime(2016,9,26,23,59,59,999999))
-        y= datetime.datetime(2016,9,27)
+        y= datetime.datetime(2016,9,20)
         self.assertEqual(x,y)
 
     def test_exclusive(self):
@@ -349,7 +349,7 @@ class Testaligndate(unittest.TestCase):
         self.assertEqual(x,y)
 
     def test_end(self):
-        x = self.d.after(datetime.datetime(2016,9,26,1,9))
+        x = self.d.end(datetime.datetime(2016,9,26,1,9))
         y= datetime.datetime(2016,9,27)
         self.assertEqual(x,y)
 
@@ -357,17 +357,17 @@ class Testalign(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("every 1 weeks starting on tuesday")
 
-    def test_not_there(self):
+    def test(self):
         x = self.d.after(datetime.datetime(2016,9,26,1,9))
-        y= datetime.datetime(2016,9,27)
+        y= datetime.datetime(2016,9,20)
         self.assertEqual(x,y)
 
-    def test_not_there2(self):
+    def test2(self):
         x = self.d.after(datetime.datetime(2016,9,25,1,9))
-        y= datetime.datetime(2016,9,27)
+        y= datetime.datetime(2016,9,20)
         self.assertEqual(x,y)
 
-    def test_already_there(self):
+    def test3(self):
         x = self.d.after(datetime.datetime(2016,9,27,1,7))
         y= datetime.datetime(2016,9,27)
         self.assertEqual(x,y)
@@ -378,7 +378,7 @@ class Testalign(unittest.TestCase):
         self.assertEqual(x,y)
 
     def test_end(self):
-        x = self.d.after(datetime.datetime(2016,9,26,1,9))
+        x = self.d.end(datetime.datetime(2016,9,26,1,9))
         y= datetime.datetime(2016,9,27)
         self.assertEqual(x,y)
 
@@ -386,17 +386,17 @@ class Teststringweeks(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("every 1 weeks")
 
-    def test_not_there(self):
+    def test(self):
         x = self.d.after(datetime.datetime(2016,9,28,1,9))
-        y= datetime.datetime(2016,10,3)
+        y= datetime.datetime(2016,9,26)
         self.assertEqual(x,y)
 
-    def test_not_there2(self):
+    def test2(self):
         x = self.d.after(datetime.datetime(2016,10,3,1,9))
         y= datetime.datetime(2016,10,3)
         self.assertEqual(x,y)
 
-    def test_already_there(self):
+    def test4(self):
         x = self.d.after(datetime.datetime(2016,10,3,1,7))
         y= datetime.datetime(2016,10,3)
         self.assertEqual(x,y)

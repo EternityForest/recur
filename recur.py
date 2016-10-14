@@ -271,6 +271,26 @@ class ConstraintSystem(BaseConstraint):
 
         return time
 
+class ForConstraint(BaseConstraint):
+    def __init__(self,constraint, length):
+        self.constraint = constraint
+        self.sort = constraint.sort
+        self.length = length
+
+    def after(self, dt, inclusive=True, align=None):
+        if inclusive:
+            x = self.constraint.before(dt,align)
+            if (dt-x).total_seconds()<= self.length:
+                return x
+        else:
+            return self.constraint.after(dt,False, align)
+
+    def end(self, dt, align=None):
+        x = self.constraint.before(dt,align)
+        return x+datetime.timedelta(seconds=self.length)
+
+    def before(self, dt, align=None):
+        return selt.constraint.before(dt)
 
 class weekday(BaseConstraint):
     "Match one day or list of days in every week"
@@ -291,6 +311,16 @@ class weekday(BaseConstraint):
                 return dt.replace(hour=0, minute=0,second=0, microsecond=0)
             else:
                 dt= dt+datetime.timedelta(days=1)
+
+    def before(self,dt, align=None):
+        if not(self.day):
+            return None
+
+        while(1):
+            if dt.weekday() in self.day:
+                return dt.replace(hour=0, minute=0,second=0, microsecond=0)
+            else:
+                dt= dt-datetime.timedelta(days=1)
 
     def end(self, dt, align=None):
         if not dt.weekday() in self.day:
@@ -318,6 +348,16 @@ class hour(BaseConstraint):
             else:
                 dt= dt+datetime.timedelta(hours=1)
 
+    def before(self,dt,align=None):
+        if not(self.hour):
+            return None
+
+        while(1):
+            if dt.hour in self.hour:
+                return dt.replace(minute=0,second=0, microsecond=0)
+            else:
+                dt= dt-datetime.timedelta(hours=1)
+
     def end(self,dt,align=None):
         if not(self.hour):
             return dt
@@ -344,6 +384,12 @@ class time(BaseConstraint):
         else:
             return (dt+datetime.timedelta(days=1)).replace(hour=self.time.hour, minute=self.time.minute, second=self.time.second, microsecond=self.time.microsecond)
 
+    def before(self,dt, align=None):
+        if not dt.time() > self.time:
+            return dt.replace(hour=self.time.hour, minute=self.time.minute, second=self.time.second, microsecond=self.time.microsecond)
+        else:
+            return (dt-datetime.timedelta(days=1)).replace(hour=self.time.hour, minute=self.time.minute, second=self.time.second, microsecond=self.time.microsecond)
+
     def end(self,dt,align=None):
         #Times are one moment in time that don't have any duration
         return dt+datetime.timedelta(microseconds=1)
@@ -368,6 +414,13 @@ class aftertime(BaseConstraint):
         else:
             return (dt+datetime.timedelta(days=1)).replace(hour=self.time.hour, minute=self.time.minute, second=self.time.second, microsecond=self.time.microsecond)
 
+    def before(self,dt,align=None):
+        #If it is after the time return current if we are inclusive
+        if dt.time() >= self.time:
+            return dt.replace(hour=self.time.hour, minute=self.time.minute, second=self.time.second, microsecond=self.time.microsecond)
+        else:
+            return (dt-datetime.timedelta(days=1)).replace(hour=self.time.hour, minute=self.time.minute, second=self.time.second, microsecond=self.time.microsecond)
+
     def end(self,dt,align=None):
         return (dt+datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -387,6 +440,13 @@ class beforetime(BaseConstraint):
                 return dt.replace(hour=0, minute=0, second=0, microsecond=0)
         #Return midnight that starts tomorrow
         return (dt+datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def before(self,dt, align=None):
+        #If it is after the time return current if we are inclusive
+        if dt.time() <= self.time:
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        #Return midnight that starts tomorrow
+        return (dt-datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     def end(self,dt,align=None):
         t = self.time
@@ -510,9 +570,11 @@ class weekly(BaseConstraint):
         #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
         dt_offset = dt2.toordinal() - (align%(self.interval))
 
-        if inclusive and (dt_offset) % self.interval == 0:
+        if inclusive and ((dt_offset) % self.interval) < 7:
             #Get start of hour. Return the actual time not our offset version
-            return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour)
+            dt= dt.replace(microsecond=aligndt.microsecond,second=aligndt.second,minute=aligndt.minute,hour=aligndt.hour)
+            dt -= datetime.timedelta(days = ((dt_offset) % self.interval))
+            return dt
         else:
             #Increment to next match. We modulo the hour of the current time with the interval,
             #Then subtract the result from the interval to get the time left in this interval
@@ -740,6 +802,30 @@ class monthday(BaseConstraint):
             else:
                 dt= dt+datetime.timedelta(days=1)
 
+
+    def before(self,dt, aftertimealign=None):
+        if not self.day:
+            return None
+
+
+
+        #If we are past the last in the list of matching days
+        if dt.day > self.day[-1]:
+            while 1:
+                dt = dt.replace(day=self.day[0], hour=0, minute=0,second=0, microsecond=0)
+                #Monthdelta saturates at the last day of the month o=if the current day is higher than next month has in days.
+                #So, we have to keep checking until we find a matching month
+                dt = monthdelta(dt,-1)
+                if dt.day == self.day[0]:
+                    return dt
+
+        #Just increment by day until we find a match
+        while(1):
+            if dt.day in self.day:
+                return dt.replace(hour=0, minute=0,second=0, microsecond=0)
+            else:
+                dt= dt-datetime.timedelta(days=1)
+
     def end(self,dt,align=None):
         if not self.day:
             return dt
@@ -802,6 +888,21 @@ class weekdayofmonth(BaseConstraint):
             else:
                 return m
 
+
+    def before(self, dt, align=None):
+        dt = dt.replace(hour=0,minute=0,second=0, microsecond=0)
+        dt2 = dt
+        for i in range(12):
+            m = getNthWeekday(self.n,self.weekday,dt2)
+            if not m or m<dt:
+                if dt.month <12:
+                    dt2 = dt2.replace(month=dt.month-1)
+                else:
+                    dt2 = dt2.replace(year=dt.year-1, month=1)
+                continue
+            else:
+                return m
+
     def end(self, dt,align=None):
         if not dt.replace(hour=0,minute=0,second=0, microsecond=0) == getNthWeekday(self.n,self.weekday,dt):
             return dt
@@ -824,6 +925,13 @@ class date(BaseConstraint):
                 return dt.replace(hour=0, minute=0,second=0, microsecond=0)
             else:
                 dt= dt+datetime.timedelta(days=1)
+
+    def before(self,dt,align=None):
+        while(1):
+            if dayOfYear(dt) in self.day:
+                return dt.replace(hour=0, minute=0,second=0, microsecond=0)
+            else:
+                dt= dt-datetime.timedelta(days=1)
 
     def end(self,dt,align=None):
         if not self.day:
@@ -856,6 +964,17 @@ class yearday(BaseConstraint):
                 return dt.replace(hour=0, minute=0,second=0, microsecond=0)
             else:
                 dt= dt+datetime.timedelta(days=1)
+
+
+    def before(self,dt,align=None):
+        if not self.day:
+            return None
+
+        while(1):
+            if dayOfYear(dt) in self.day:
+                return dt.replace(hour=0, minute=0,second=0, microsecond=0)
+            else:
+                dt= dt-datetime.timedelta(days=1)
 
     def end(self,dt,align=None):
         if not self.day:
