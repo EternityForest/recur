@@ -1,4 +1,4 @@
-import recur_parser, recur
+import recur_parser, recur,grako
 import datetime
 import time as tt
 from recur_dsl import *
@@ -7,23 +7,63 @@ p = recur_parser.UnknownParser()
 
 
 
-
-class Testaligndateminutes(unittest.TestCase):
+class Testsyntaxerrors(unittest.TestCase):
     def setUp(self):
         pass
 
     def test_syntax_error(self):
         try:
-            getConstraint("every 5 minutes")
+            getConstraint("every 5 minutes blah")
             self.assertTrue(False)
         except ValueError as e:
             print(e)
             self.assertTrue(True)
 
+    def test_syntax_error(self):
+        try:
+            getConstraint("every 5 minuttes")
+            self.assertTrue(False)
+        except grako.exceptions.FailedParse as e:
+            self.assertTrue(True)
 
-class Testaligndateminutes(unittest.TestCase):
+class TestNthWeekdayOfMonth(unittest.TestCase):
     def setUp(self):
-        self.d = getConstraint("every 5 minutes for 10")
+        self.d = getConstraint("every 3rd tuesday of the month")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,11,1,2,12))
+        y= datetime.datetime(2016,11,15,0,0)
+        self.assertEqual(x,y)
+
+    def test_almost_there(self):
+        x = self.d.after(datetime.datetime(2016,11,14,23,59,59,999999))
+        y= datetime.datetime(2016,11,15,0,0)
+        self.assertEqual(x,y)
+
+    def test_before(self):
+        x = self.d.before(datetime.datetime(2016,11,17,23,59,59,999999))
+        y= datetime.datetime(2016,11,15,0,0)
+        self.assertEqual(x,y)
+
+    def test_end(self):
+        x = self.d.end(datetime.datetime(2016,11,15,22,59,59,999999))
+        y= datetime.datetime(2016,11,16,0,0)
+        self.assertEqual(x,y)
+
+    def test_end2(self):
+        x = self.d.end(datetime.datetime(2016,11,15,2,53,5,9999))
+        y= datetime.datetime(2016,11,16,0,0)
+        self.assertEqual(x,y)
+    def test_exc(self):
+        x = self.d.after(datetime.datetime(2016,11,15,6,15),inclusive=False)
+        y= datetime.datetime(2016,12,20,0,0)
+        self.assertEqual(x,y)
+
+
+
+class Testforminutes(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every 5 minutes for 10 seconds")
 
     def test_not_there(self):
         x = self.d.after(datetime.datetime(2016,9,6,2,12))
@@ -137,7 +177,24 @@ class Testaligndatedays(unittest.TestCase):
         self.assertEqual(x,y)
 
 
+class Testaligndateminute(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every minute starting on september 6 2016 at 2:15pm")
 
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,14,59),False)
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2016,9,6,2,15),False)
+        y= datetime.datetime(2016,9,6,2,16)
+        self.assertEqual(x,y)
+
+    def test_end(self):
+        x = self.d.end(datetime.datetime(2016,9,6,2,15,6))
+        y= datetime.datetime(2016,9,6,2,16)
+        self.assertEqual(x,y)
 
 class Testaligndateminutes(unittest.TestCase):
     def setUp(self):
@@ -877,9 +934,9 @@ class TestTime(unittest.TestCase):
 
 
 
-class TestWeekdayOfMonth1stMonday(unittest.TestCase):
+class TestNthWeekdayConstraint1stMonday(unittest.TestCase):
     def setUp(self):
-        self.s = weekdayofmonth(1, 0)
+        self.s = NthWeekdayConstraint(1, 0)
 
     def test_not_there(self):
         x = self.s.after(datetime.datetime(2015,9,1,5,34,5))

@@ -28,21 +28,40 @@ def parseOrdinal(s):
         return(int(s[:-2]))
     return(int(s))
 
+intervals = {
+'week': 7*24*60*60,
+'weeks': 7*24*60*60,
+
+'day': 24*60*60,
+'days': 24*60*60,
+
+'hour': 60*60,
+'hours': 60*60,
+
+'minute': 60,
+'minutes': 60,
+
+'second': 1,
+'seconds': 1
+}
 def parseTime(s):
     "Given the AST for a strng like 4:45pm, return a datetime.time"
     return datetime.time(
     int(s.hour)+ (12 if s.ampm =="pm" else 0), int(s.minute) if s.minute else 0, int(s.second) if s.second else 0, s.ms*1000 if s.ms else 0)
 
 def parseWeekday(s):
-    return{
-    "mon":0, "monday":0,
-    "tue":1, "tuesday":1,
-    "wed":2, "wednesday":2,
-    "thu": 3, "thurs": 3,"thursday":3,
-    "fri":4, "friday":4,
-    'sat':5,"saturday":5,
-    "sun":6,"sunday":6
-    }[s.lower()]
+    try:
+        return{
+        "mon":0, "monday":0,
+        "tue":1, "tuesday":1,
+        "wed":2, "wednesday":2,
+        "thu": 3, "thurs": 3,"thursday":3,
+        "fri":4, "friday":4,
+        'sat':5,"saturday":5,
+        "sun":6,"sunday":6
+        }[s.lower()]
+    except:
+        raise ValueError(s+" is not a valid weekday")
 
 def parseMonth(s):
     return{
@@ -66,12 +85,41 @@ class semantics():
     def syntax_error(self,ast):
         raise ValueError("Unexpected token[s]:" + str(ast))
 
+    def nthweekdayconstraint(self, ast):
+        return recur.NthWeekdayConstraint(parseOrdinal(ast[0]),parseWeekday(ast[1]))
+
     def forconstraint(self,ast):
-        return ForConstraint(ast.const, ast.len
-        )
+        return recur.ForConstraint(ast[0], float(float(ast[2])*intervals[ast[3]]) )
+
     def nintervalconstraint(self, ast):
         n = parseOrdinal(ast[1])
         i = ast[2]
+        return {
+        "minute" : recur.minutely,
+        "minutes" : recur.minutely,
+
+        "hour" : recur.hourly,
+        "hours" : recur.hourly,
+
+        "day" : recur.daily,
+        "days" : recur.daily,
+
+        "second" : recur.secondly,
+        "seconds" : recur.secondly,
+
+        "month" : recur.monthly,
+        "months" : recur.monthly,
+
+        "year" : recur.yearly,
+        "years" : recur.yearly,
+
+        "week": recur.weekly,
+        "weeks": recur.weekly
+        }[i](n)
+
+    def intervalconstraint(self, ast):
+        n = 1
+        i = ast[1]
         return {
         "minute" : recur.minutely,
         "minutes" : recur.minutely,

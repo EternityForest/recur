@@ -225,7 +225,6 @@ class ConstraintSystem(BaseConstraint):
             for i in self.constraints:
                 #Get either prev occurance or start of this occurance
                 t = i.before(time,True,align)
-                print(i,time, t)
                 if not t==time:
                     x = False
                 #time is a var that only moves forwar until we find one that matches everything. Moving backwards
@@ -282,12 +281,17 @@ class ForConstraint(BaseConstraint):
             x = self.constraint.before(dt,align)
             if (dt-x).total_seconds()<= self.length:
                 return x
+            else:
+                return self.constraint.after(dt,False, align)
         else:
             return self.constraint.after(dt,False, align)
 
     def end(self, dt, align=None):
         x = self.constraint.before(dt,align)
-        return x+datetime.timedelta(seconds=self.length)
+        if x>dt:
+            return dt
+        else:
+            return x+datetime.timedelta(seconds=self.length)
 
     def before(self, dt, align=None):
         return selt.constraint.before(dt)
@@ -865,7 +869,7 @@ def getNthWeekday(n, day, dt):
     else:
         return t
 
-class weekdayofmonth(BaseConstraint):
+class NthWeekdayConstraint(BaseConstraint):
     "Match the nth weekday of a month, such as first tuesday or third sunday"
     def __init__(self,n, weekday):
         self.n = n
@@ -894,11 +898,11 @@ class weekdayofmonth(BaseConstraint):
         dt2 = dt
         for i in range(12):
             m = getNthWeekday(self.n,self.weekday,dt2)
-            if not m or m<dt:
-                if dt.month <12:
+            if not m or m>dt:
+                if dt.month > 1:
                     dt2 = dt2.replace(month=dt.month-1)
                 else:
-                    dt2 = dt2.replace(year=dt.year-1, month=1)
+                    dt2 = dt2.replace(year=dt.year-1, month=12)
                 continue
             else:
                 return m

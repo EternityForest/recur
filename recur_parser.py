@@ -18,8 +18,6 @@ from grako.parsing import graken, Parser
 from grako.util import re, RE_FLAGS, generic_main  # noqa
 
 
-__version__ = (2016, 10, 5, 2, 46, 34, 2)
-
 __all__ = [
     'UnknownParser',
     'UnknownSemantics',
@@ -30,15 +28,17 @@ KEYWORDS = set([])
 
 
 class UnknownBuffer(Buffer):
-    def __init__(self,
-                 text,
-                 whitespace=None,
-                 nameguard=None,
-                 comments_re=None,
-                 eol_comments_re=None,
-                 ignorecase=None,
-                 namechars='',
-                 **kwargs):
+    def __init__(
+        self,
+        text,
+        whitespace=None,
+        nameguard=None,
+        comments_re=None,
+        eol_comments_re=None,
+        ignorecase=None,
+        namechars='',
+        **kwargs
+    ):
         super(UnknownBuffer, self).__init__(
             text,
             whitespace=whitespace,
@@ -52,17 +52,22 @@ class UnknownBuffer(Buffer):
 
 
 class UnknownParser(Parser):
-    def __init__(self,
-                 whitespace=None,
-                 nameguard=None,
-                 comments_re=None,
-                 eol_comments_re=None,
-                 ignorecase=None,
-                 left_recursion=True,
-                 parseinfo=True,
-                 keywords=KEYWORDS,
-                 namechars='',
-                 **kwargs):
+    def __init__(
+        self,
+        whitespace=None,
+        nameguard=None,
+        comments_re=None,
+        eol_comments_re=None,
+        ignorecase=None,
+        left_recursion=True,
+        parseinfo=True,
+        keywords=None,
+        namechars='',
+        buffer_class=UnknownBuffer,
+        **kwargs
+    ):
+        if keywords is None:
+            keywords = KEYWORDS
         super(UnknownParser, self).__init__(
             whitespace=whitespace,
             nameguard=nameguard,
@@ -73,13 +78,9 @@ class UnknownParser(Parser):
             parseinfo=parseinfo,
             keywords=keywords,
             namechars=namechars,
+            buffer_class=buffer_class,
             **kwargs
         )
-
-    def parse(self, text, *args, **kwargs):
-        if not isinstance(text, Buffer):
-            text = UnknownBuffer(text, **kwargs)
-        return super(UnknownParser, self).parse(text, *args, **kwargs)
 
     @graken()
     def _start_(self):
@@ -95,7 +96,11 @@ class UnknownParser(Parser):
             with self._option():
                 self._forconstraint_()
             with self._option():
+                self._intervalconstraint_()
+            with self._option():
                 self._nintervalconstraint_()
+            with self._option():
+                self._nthweekdayconstraint_()
             with self._option():
                 self._weekdayconstraint_()
             with self._option():
@@ -154,6 +159,13 @@ class UnknownParser(Parser):
         self._atomic_constraint_()
         self._token('for')
         self._integer_()
+        with self._group():
+            with self._choice():
+                with self._option():
+                    self._interval_()
+                with self._option():
+                    self._intervals_()
+                self._error('no available options')
 
     @graken()
     def _timeinterval_(self):
@@ -638,6 +650,12 @@ class UnknownParser(Parser):
             self._error('no available options')
 
     @graken()
+    def _intervalconstraint_(self):
+        with self._group():
+            self._token('every')
+            self._interval_()
+
+    @graken()
     def _dateconstraint_(self):
         with self._choice():
             with self._option():
@@ -704,6 +722,23 @@ class UnknownParser(Parser):
             self._token('and')
             self._weekday_()
             self.add_last_node_to_name('@')
+
+    @graken()
+    def _nthweekdayconstraint_(self):
+        with self._group():
+            with self._choice():
+                with self._option():
+                    self._token('the')
+                with self._option():
+                    self._token('on the')
+                with self._option():
+                    self._token('every')
+                self._error('expecting one of: every on the the')
+        self._ordinal_()
+        self.add_last_node_to_name('@')
+        self._weekday_()
+        self.add_last_node_to_name('@')
+        self._token('of the month')
 
     @graken()
     def _startingat_(self):
@@ -831,6 +866,9 @@ class UnknownSemantics(object):
     def nintervalconstraint(self, ast):
         return ast
 
+    def intervalconstraint(self, ast):
+        return ast
+
     def dateconstraint(self, ast):
         return ast
 
@@ -846,37 +884,18 @@ class UnknownSemantics(object):
     def weekdayconstraint(self, ast):
         return ast
 
+    def nthweekdayconstraint(self, ast):
+        return ast
+
     def startingat(self, ast):
         return ast
 
 
-def main(
-        filename,
-        startrule,
-        trace=False,
-        whitespace=None,
-        nameguard=None,
-        comments_re=None,
-        eol_comments_re=None,
-        ignorecase=None,
-        left_recursion=True,
-        parseinfo=True,
-        **kwargs):
-
+def main(filename, startrule, **kwargs):
     with open(filename) as f:
         text = f.read()
-    whitespace = whitespace or None
     parser = UnknownParser(parseinfo=False)
-    ast = parser.parse(
-        text,
-        startrule,
-        filename=filename,
-        trace=trace,
-        whitespace=whitespace,
-        nameguard=nameguard,
-        ignorecase=ignorecase,
-        **kwargs)
-    return ast
+    return parser.parse(text, startrule, filename=filename, **kwargs)
 
 if __name__ == '__main__':
     import json

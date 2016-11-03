@@ -1,9 +1,7 @@
-
-
-
 start =and_constraint [startingat] [syntax_error];
 #Basic stuff to do with how constraints are combined
-atomic_constraint = forconstraint|nintervalconstraint|weekdayconstraint|monthdayconstraint|betweentimesofdayconstraint|yeardayconstraint|
+atomic_constraint = forconstraint|intervalconstraint|nintervalconstraint|nthweekdayconstraint|weekdayconstraint|
+                    monthdayconstraint|betweentimesofdayconstraint|yeardayconstraint|
                     timeofdayconstraint|aftertimeofdayconstraint|
                     ('(' and_constraint ')')|except_constraint;
 
@@ -11,7 +9,7 @@ syntax_error = /[.\w]+/;
 constraint_list = {atomic_constraint}+;
 and_constraint = allof+:constraint_list {['and'] allof+:constraint_list};
 except_constraint = 'except' atomic_constraint;
-forconstraint = atomic_constraint 'for' integer;
+forconstraint = atomic_constraint 'for' integer (interval|intervals);
 
 #Data types
 timeinterval = number ("seconds" | "minutes" |"hours" | "days" | "weeks");
@@ -44,11 +42,13 @@ timeofdayconstraint = ['at'] timeofdayconstraint:times;
 aftertimeofdayconstraint = 'after' aftertimeofdayconstraint:time;
 betweentimesofdayconstraint = ('between' @+:time 'and' @+:time)| ('from' @+:time 'to' @+:time);
 nintervalconstraint = ('every' integer intervals) | ('every' ordinal interval);
+intervalconstraint = ('every' interval);
 dateconstraint = (["on"] dates) | ('every year on') date;
 datewithyearconstraint = (["on"] datewithyear);
 yeardayconstraint = "on the " ordinal "day of the year";
 monthdayconstraint = "on the"  @+:ordinal {[','] @+:ordinal} [[',']'and'  @+:ordinal] ["day of the month"];
 weekdayconstraint  = ['every'] @+:weekday {[','] @+:weekday} [[',']'and'  @+:weekday];
+nthweekdayconstraint = ('the'|'on the'|'every') @+:ordinal @+:weekday 'of the month';
 
 #Directives
 startingat = ("starting" ['at'|'on'] @:datetimewithyear) |"starting on" weekday:weekday;
