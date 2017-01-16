@@ -1,3 +1,21 @@
+#COPYRIGHT (c) 2016 Daniel Dunn
+
+#GNU GENERAL PUBLIC LICENSE
+#   Version 3, 29 June 2007
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import recur_parser, recur
 import datetime
 p = recur_parser.UnknownParser()
@@ -144,7 +162,12 @@ class semantics():
         }[i](n)
 
     def startingat(self,ast):
-        self.align = parseDateTimeWithYearWithDefaults(ast)
+        x = parseDateTimeWithYearWithDefaults(ast)
+        #Hack, I don't know why this is running twice for only one starting at statement.
+        if hasattr(self,'align') and not self.align == x:
+            raise ValueError("Cannot have multiple alignment points in a string, already set to "+str(self.align))
+        self.align = x
+        return recur.startingat(self.align)
 
     def constraint_list(self, ast):
         x = ast

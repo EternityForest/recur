@@ -30,7 +30,7 @@ Return the end of the matching time period that dt is in, or return dt if dt is 
 
 
 ## Recur DSL
-The expression creation syntax is fairly simple. Generally you can enter plain English expressions and they will generally work.
+The expression creation syntax is fairly simple. Generally you can enter plain English expressions and they will usually just work.
 
 
 ### Data types
@@ -53,7 +53,7 @@ A day of the month is simply specified as an integers
 
 #### Times of day
 The following are all valid time formats: `4pm`, `4:46pm`, `16:14`(Times without am or pm are assumed to use 24h time),
-`16:14pm`, `1:56:44`, `11:56:44am`, `15:12:34:0068am`(The last four are the milliseconds).
+`1:14pm`, `1:56:44`, `11:56:44am`, `1:12:34:0068am`(The last four are the milliseconds).
 
 #### Dates
 The following are all valid date formats: `jun 2 2016`, `feb 3rd 2016`, `2 jan 2016`
@@ -85,6 +85,8 @@ By default constraints "align" to 1/1/1. This means that the expression "every y
 
 `every year starting Jan 9 2014` matches a set of ranges starting on Jan 9 every year. In effect, it "offsets the phase" of matches.
 
+The "Starting at" constraint also behaves as a normal constraint, excluding matches before the given time, however it may only occur once.
+
 #### Nth weekday
 `every <ordinal> <weekday> of the month` matches the entirety of one specified day in every month. It is always aligned to midnight.
 
@@ -93,3 +95,21 @@ By default constraints "align" to 1/1/1. This means that the expression "every y
 For example `every 3 weeks` will match the entirety of every third week. By default intervals containing "weeks" are aligned to Mondays, while the others are aligned to 1/1/1. "every 2 weeks starting at 2pm" will match a series of 7*24 periods that start and end at 2pm.
 
 For the purpose of this constraint, a month is considered an interval. It will always use calendar months, and can be aligned. If the align point is past the end of a month, the last day of the month is used. For example `every month starting on Jan 30` will end on the 28th or 29th on leap years in February because there is no Feb 30.
+
+
+#### Day of year
+`on the <ordinal> day of the year` Will match the entirety of that calender day in the year, from midnight to midnight. Alignment has no effect on this constraint.
+
+
+#### Day of the month
+`on the <ordinal>` and `on the <ordinal> day of the month` will match the entirety of a specified day of each month regardless of Alignment.
+
+
+#### Exact time
+`at <time>` will match one moment in time on every day. Alignment has no effect.
+
+#### Between times
+`between <time> and <time>` will match that range of time every day. Time ranges that cross midnight are correctly handled, and alignment has no effect.
+
+#### Weekday
+`on <weekday>` will match the entirety of that day every week without regard to alignment.

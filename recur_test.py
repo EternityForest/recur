@@ -1,3 +1,20 @@
+#COPYRIGHT (c) 2016 Daniel Dunn
+
+#GNU GENERAL PUBLIC LICENSE
+#   Version 3, 29 June 2007
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import recur_parser, recur,grako
 import datetime
 import time as tt
@@ -105,20 +122,25 @@ class Testaligndatedays(unittest.TestCase):
         self.d = getConstraint("every 6 days starting on september 6 2016 at 2:15pm")
 
     def test_before_almost_there(self):
-        x = self.d.before(datetime.datetime(2016,9,6,2,12))
-        y= datetime.datetime(2016,8,31,2,15)
+        x = self.d.before(datetime.datetime(2016,10,6,2,12))
+        y= datetime.datetime(2016,9,6,2,15)
         self.assertEqual(x,y)
 
 
     def test_after_as_used_in_before_almost_there(self):
         x = self.d.after(datetime.datetime(2016,9,6,2,12)-datetime.timedelta(days=6))
-        y= datetime.datetime(2016,8,31,2,15)
+        y= datetime.datetime(2016,9,6,2,15)
         self.assertEqual(x,y)
 
 
-    def test_before(self):
+    def test_before_None(self):
         x = self.d.before(datetime.datetime(2016,9,5))
-        y= datetime.datetime(2016,8,31,2,15)
+        y= None
+        self.assertEqual(x,y)
+
+    def test_before_None(self):
+        x = self.d.before(datetime.datetime(2016,10,5))
+        y= datetime.datetime(2016,9,6,2,15)
         self.assertEqual(x,y)
 
     def test_before_inside(self):
@@ -196,6 +218,30 @@ class Testaligndateminute(unittest.TestCase):
         y= datetime.datetime(2016,9,6,2,16)
         self.assertEqual(x,y)
 
+class Testaligndateminute2(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every minute starting on september 6 2016 at 11:50pm")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,11,49,59),False)
+        y= datetime.datetime(2016,9,6,11,50)
+        self.assertEqual(x,y)
+
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2016,9,6,11,50),False)
+        y= datetime.datetime(2016,9,6,11,51)
+        self.assertEqual(x,y)
+
+    def test_before(self):
+        x = self.d.before(datetime.datetime(2016,9,6,11,55,6))
+        y= datetime.datetime(2016,9,6,11,50)
+        self.assertEqual(x,y)
+
+    def test_end(self):
+        x = self.d.end(datetime.datetime(2016,9,6,11,50,6))
+        y= datetime.datetime(2016,9,6,11,51)
+        self.assertEqual(x,y)
+
 class Testaligndateminutes(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("every 5 minutes starting on september 6 2016 at 2:15pm")
@@ -238,7 +284,7 @@ class Testaligndateminutes(unittest.TestCase):
 class Testaligndatemonths3(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("every 3 months starting on august 6 2016 at 2:15pm")
-
+        print("s",repr(self.d.constraint.constraints))
     def test_not_there(self):
         x = self.d.after(datetime.datetime(2016,7,2,1,9))
         y= datetime.datetime(2016,8,6,2,15)
@@ -259,22 +305,22 @@ class Testaligndatemonths3(unittest.TestCase):
         y= datetime.datetime(2016,8,6,2,15)
         self.assertEqual(x,y)
 
-    def test_almost_there2(self):
+    def test_blah(self):
         x = self.d.after(datetime.datetime(2016,9,6,2,12,5))
         y= datetime.datetime(2016,8,6,2,15)
         self.assertEqual(x,y)
 
-    def test_almost_there3(self):
+    def test_3(self):
         x = self.d.after(datetime.datetime(2016,9,6,2,10,5))
         y= datetime.datetime(2016,8,6,2,15)
         self.assertEqual(x,y)
 
-    def test_almost_over(self):
+    def test_almost(self):
         x = self.d.after(datetime.datetime(2016,9,6,2,14,59,999999))
         y= datetime.datetime(2016,8,6,2,15)
         self.assertEqual(x,y)
 
-    def test_almost_over2(self):
+    def test_almost2(self):
         x = self.d.after(datetime.datetime(2016,12,6,2,14,59,999999))
         y= datetime.datetime(2016,11,6,2,15)
         self.assertEqual(x,y)
@@ -308,7 +354,7 @@ class Testaligndatemonths3(unittest.TestCase):
 
 class Testaligndatemonths1(unittest.TestCase):
     def setUp(self):
-        self.d = getConstraint("every 1 months starting on september 6 2016 at 2:15pm")
+        self.d = getConstraint("every 1 months starting on august 6 2016 at 2:15pm")
 
     def test_1(self):
         x = self.d.after(datetime.datetime(2016,9,2,1,9))

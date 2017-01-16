@@ -86,8 +86,6 @@ class UnknownParser(Parser):
     def _start_(self):
         self._and_constraint_()
         with self._optional():
-            self._startingat_()
-        with self._optional():
             self._syntax_error_()
 
     @graken()
@@ -99,6 +97,8 @@ class UnknownParser(Parser):
                 self._intervalconstraint_()
             with self._option():
                 self._nintervalconstraint_()
+            with self._option():
+                self._startingat_()
             with self._option():
                 self._nthweekdayconstraint_()
             with self._option():

@@ -1,3 +1,20 @@
+#COPYRIGHT (c) 2016 Daniel Dunn
+
+#GNU GENERAL PUBLIC LICENSE
+#   Version 3, 29 June 2007
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import datetime,unittest
 
 day1 = datetime.datetime(1,1,1)
@@ -19,7 +36,7 @@ def dt_to_unix(dt):
     return (dt - datetime.datetime(1970, 1, 1)).total_seconds()
 
 def asMinutes(dt):
-    return dt.minute+dt.hour*60+ (dt.toordinal()*24*60)
+    return dt.minute+ (dt.hour*60) + (dt.toordinal()*24*60)
 
 def asHours(dt):
     return dt.hour + dt.toordinal()*24
@@ -169,8 +186,7 @@ class ConstraintSystem(BaseConstraint):
         for i in self.constraints:
             if not i.after(time) <= time:
                 return False
-            else:
-                return True
+        return True
 
     def after(self,  time, inclusive=True,align=None):
         #Loop over n constraints n times
@@ -179,12 +195,14 @@ class ConstraintSystem(BaseConstraint):
         #If we want the next one and this one, then loop through all the constraints
         #and find the one that has the soonest next time and start looking from there
         if not inclusive:
-            smallest = datetime.timedelta(days=99999)
+            smallest = datetime.timedelta(days=999999)
             for i in self.constraints:
-                x = i.after(time, False,align)
-                #If any constraint does not have a next, the whole system has no next, so return None
+                x = i.after(time, inclusive=False,align=align)
+                #If any constraint does not have a next, ignore that one and see if there is
+                #Another constraint that does
                 if not x:
-                    return None
+                    continue
+                print("noninc",i,x)
                 smallest = min(smallest, x-time)
 
             #increment time to the first matching constraint
@@ -195,22 +213,31 @@ class ConstraintSystem(BaseConstraint):
             x = True
             #For each constraint, get the next occurance after our current time.
             #If the time is not equal to the current time, then this time is not the next occurance of the total system.
+            round_latest = day1
             for i in self.constraints:
                 #Get either next occurance or start of this occurance
-                t = i.after(time,True,align)
+                t = i.after(time,inclusive=True,align=align)
                 #We check if time is less than or equal to t because constraints return the start of
                 #A time period if the time given is within an occurance if inclusive is true
                 if not t<=time:
                     x = False
                 #time is a var that only moves forwar until we find one that matches everything. Moving backwards
-                #Would make an infinite loop in some cases
+                #Would make an infinite loop in some cases.
+
                 if t > time:
                     time = t
+                #The time var only goes forward, but that prevents us from getting the start of a match
+                #The solution is this var that gives us the latest return value of this round.
+
+                #We know that will be the time we want because the final round will have every constraint match the time var.
+                #So the last time of the bunch  is going to be the first val satisfing everything.
+                if t>round_latest:
+                    round_latest=t
                 #If any constraint has no next, return None
                 if time==None:
                     return None
             if x:
-                return time
+                return round_latest
         raise RuntimeError("Could not satisfy constraints in 500 iterations: "+repr(self.constraints))
 
     def before(self,  time, align=None):
@@ -224,9 +251,12 @@ class ConstraintSystem(BaseConstraint):
             #If the time is not equal to the current time, then this time is not the next occurance of the total system.
             for i in self.constraints:
                 #Get either prev occurance or start of this occurance
-                t = i.before(time,True,align)
+                t = i.before(time,align)
+                if not t:
+                    return None
                 if not t==time:
                     x = False
+
                 #time is a var that only moves forwar until we find one that matches everything. Moving backwards
                 #Would make an infinite loop in some cases
                 if t < time:
@@ -243,32 +273,16 @@ class ConstraintSystem(BaseConstraint):
         #Loop over n constraints n times
         if time==None:
             return None
-        #If we want the next one and this one, then loop through all the constraints
-        #and find the one that has the soonest next time and start looking from there
-        if not inclusive:
-            smallest = datetime.timedelta(days=99999)
-            for i in self.constraints:
-                x = i.end(time, False,align)
-                if not x:
-                    return None
-                smallest = min(smallest, x-time)
 
-        time += smallest
 
-        for i in range(0,250):
-            x = True
-            for i in self.constraints:
-                t = time
-                time = i.end(t,align)
-                if not time==t:
-                    x = False
+        smallest = datetime.timedelta(days=99999)
+        for i in self.constraints:
+            x = i.end(time,align)
+            if not x:
+                return None
+            smallest = min(smallest, x-time)
 
-                if time==None:
-                    return None
-            if x:
-                break
-
-        return time
+        return time+smallest
 
 class ForConstraint(BaseConstraint):
     def __init__(self,constraint, length):
@@ -433,7 +447,7 @@ class beforetime(BaseConstraint):
     "Match a range of time that begins at midnight in every day"
     def __init__(self,*time):
         "Arguments must be the same as would be used for datetime.time"
-        self.time = timeFromArgs(*time)
+        self.time = time[0] if isinstance(time[0],datetime.time) else timeFromArgs(*time)
         self.sort = 24*60*60
     def __repr__(self):
         return "<beforetime "+str(self.time)+">"
@@ -459,8 +473,54 @@ class beforetime(BaseConstraint):
 
 
 
+class startingat(BaseConstraint):
+    "Match a range of time that starts at a specific moment"
+    def __init__(self,dt):
+        self.time = dt
+        #Arbitrary large sort value
+        self.sort = 24*60*60*356*10
+
+    def __repr__(self):
+        return "<after "+str(self.time)+">"
+
+    def after(self,dt, inclusive=True,align=None):
+        #If it is after the time return current if we are inclusive
+        if dt >= self.time:
+            if inclusive:
+                return self.time
+            else:
+                return None
+        return self.time
+
+    def before(self,dt,align=None):
+        #If it is after the time return current if we are inclusive
+        if dt >= self.time:
+            return self.time
+        else:
+            return None
+
+    def end(self,dt,align=None):
+        return datetime.datetime.max
+
+class dummy(BaseConstraint):
+    "Match a range of time that starts at a specific moment"
+    def __init__(self,*dt):
+        self.time = dt
+        #Arbitrary large sort value
+        self.sort = 24*60*60*356*10
+
+    def __repr__(self):
+        return "<dummy, match all>"
+
+    def after(self,dt, inclusive=True,align=None):
+        return datetime.datetime(1,1,1)
+
+    def before(self,dt,align=None):
+        return datetime.datetime(1,1,1)
 
 
+    def end(self,dt,align=None):
+        return datetime.datetime.max
 
 class yearly(BaseConstraint):
     "Matches every Nth year. "
@@ -680,57 +740,6 @@ class hourly(BaseConstraint):
         return self.after(dt,True,align)+datetime.timedelta(hours=1)
 
 
-class minutely(BaseConstraint):
-    "Matches every Nth day"
-    def __init__(self,interval=1):
-        self.interval = interval
-        self.sort = interval*60*60*24
-
-    def after(self,dt, inclusive=True, align = None):
-        aligndt = align if align else day1
-        align =  asMinutes(align) if align else 0
-        dt_offset = asMinutes(dt) - (align%(self.interval))
-
-        past = True
-        #This is a performance optimization to not just call replace on both. It seems to save 2uS over 2 replace calls
-        if past and dt.second < aligndt.second:
-            past = False
-
-        if past and dt.microsecond < aligndt.microsecond:
-            past = False
-
-        if past:
-            if (dt_offset %self.interval == 0) and inclusive:
-                #Here is where I skipped another call to replace
-                return datetime.datetime(dt.year,dt.month,dt.day,dt.hour,dt.minute,aligndt.second,aligndt.microsecond)
-
-        else:
-            dt_offset_logical = asMinutes(dt-datetime.timedelta(seconds=aligndt.second, microseconds=aligndt.microsecond)) - (align%(self.interval))
-
-            if abs(dt_offset_logical-dt_offset)>1:
-                dt_offset_logical+=1
-
-            if ((dt_offset_logical %self.interval) == 0) and inclusive:
-                dt = dt-datetime.timedelta(minutes=1)
-                return datetime.datetime(dt.year,dt.month,dt.day,dt.hour,dt.minute,aligndt.second,aligndt.microsecond)
-
-            if ((dt_offset_logical+1) %self.interval == 0) and inclusive:
-                return datetime.datetime(dt.year,dt.month,dt.day,dt.hour,dt.minute,aligndt.second,aligndt.microsecond)
-        dt = dt+datetime.timedelta(minutes=self.interval-(dt_offset%self.interval))
-        return datetime.datetime(dt.year,dt.month,dt.day,dt.hour,dt.minute,aligndt.second,aligndt.microsecond)
-
-    def before(self, dt, align=None):
-        x= self.after(dt, True, align)
-        if x<=dt:
-            return x
-        dt = dt-datetime.timedelta(minutes=self.interval)
-        return(self.after(dt,True, align))
-
-    def end(self,dt,align=None):
-        aligndt = align if align else day1
-        return self.after(dt,True,align).replace(microsecond=aligndt.microsecond,second=aligndt.second)+datetime.timedelta(minutes=1)
-
-
 class secondly(BaseConstraint):
     "Matches every Nth hour"
     def __init__(self,interval=1):
@@ -771,6 +780,48 @@ class secondly(BaseConstraint):
     def end(self,dt,align=None):
         return self.after(dt,True,align)+datetime.timedelta(seconds=1)
 
+
+
+
+
+class minutely(BaseConstraint):
+    "Matches every Nth hour"
+    def __init__(self,interval=1):
+        "Match every nth minute"
+        self.interval = interval
+        self.sort = interval*60
+
+    def after(self,dt, inclusive=True, align = None):
+
+        aligndt = align if align else day1
+        #Get how far past a multiple of the correct number  the first occurance was.
+        #That is our offset, when we Subtract that fron the current time, it should give the right result.
+        #Say if we are going every 10min, but we start at minute 7, we subtract 7, so that minute 7 maps to 0 and matches m%10
+        align =asMinutes(align) if align else 0
+        dt2 = dt - datetime.timedelta(microseconds=aligndt.microsecond,seconds=aligndt.second)
+        #Subtract align from minute so that at align minutes we are at 0 in our offset timespace
+        dt_offset = asMinutes(dt2) - (align%(self.interval))
+        if inclusive and (dt_offset) % self.interval == 0:
+            #Get aligned start of second. Return the actual time not our offset version
+            return dt.replace(microsecond=aligndt.microsecond,second=aligndt.second)
+        else:
+            #Increment to next match. We modulo the second of the current time with the interval,
+            #Then subtract the result from the interval to get the time left in this interval
+            #We do all this in our offset time space.
+            #Since the offset space is a constant factor away from real time, deltas valid in one are valid in the other.
+
+            dt += datetime.timedelta(minutes=self.interval-((dt_offset) % self.interval))
+            return dt.replace(microsecond=aligndt.microsecond, second=aligndt.second)
+
+    def before(self, dt, align=None):
+        x= self.after(dt, True, align)
+        if x<=dt:
+            return x
+        dt = dt-datetime.timedelta(minutes=self.interval)
+        return(self.after(dt,True, align))
+
+    def end(self,dt,align=None):
+        return self.after(dt,True,align)+datetime.timedelta(minutes=1)
 
 
 
