@@ -18,18 +18,18 @@
 import tatsu
 grammar = """
 @@left_recursion :: False
-start = and_constraint [syntax_error];
+start =and_constraint [syntax_error];
 #Basic stuff to do with how constraints are combined
-atomic_constraint = forconstraint|intervalconstraint|nintervalconstraint|startingat|nthweekdayconstraint|weekdayconstraint|
+atomic_constraint = intervalconstraint|nintervalconstraint|startingat|nthweekdayconstraint|weekdayconstraint|
                     monthdayconstraint|betweentimesofdayconstraint|yeardayconstraint|
                     timeofdayconstraint|aftertimeofdayconstraint|
                     ('(' and_constraint ')')|except_constraint;
 
 syntax_error = /[.\w]+/;
 constraint_list = {atomic_constraint}+;
-and_constraint = allof+:constraint_list {'and' allof+:constraint_list};
+and_constraint = allof+:constraint_list {['and'] allof+:constraint_list} ["for" for:(integer (interval|intervals))];
 except_constraint = 'except' atomic_constraint;
-forconstraint = atomic_constraint "for" integer (interval|intervals);
+
 
 #Data types
 timeinterval = number ("seconds" | "minutes" |"hours" | "days" | "weeks");
@@ -38,7 +38,7 @@ integer = /\d+/;
 ordinal = 'first'|'second'|'third'|'1st'|'2nd'|'3rd'|'other'|/\d\d?th/;
 
 #If it looks like 02:45, assume 24 hour time.
-time = predefinedtime|(hour:hour [[(':' minute:minute) [(':' second:second) [(':' ms:millisecond)]]]] ampm:('am'|'pm'))|(hour:hour ':' minute:minute [[(':' second:second) [(':' ms:millisecond)]]]);
+time = (hour:hour [[(':' minute:minute) [(':' second:second) [(':' ms:millisecond)]]]] ampm:('am'|'pm'))|(hour:hour ':' minute:minute [[(':' second:second) [(':' ms:millisecond)]]]);
 times = {times:time [',']['and']}+;
 hour = /\d\d?/;
 minute = /\d\d/;
@@ -59,9 +59,8 @@ intervals = 'weeks'|'months'|'years'|'days'|'hours'|'minutes'|'seconds'|'ms'|'mi
 weekday = 'mon'|'monday'|'tue'|'tuesday'|'wed'|'wednesday'|'thu'|'thursday'|'fri'|'friday'|'sat'|'saturday'|'sun'|'sunday';
 
 #actual constraints
-timeofdayconstraint = ['at'] times;
-aftertimeofdayconstraint = 'after' time;
-beforetimeofdayconstraint = 'before' time;
+timeofdayconstraint = ['at'] timeofdayconstraint:times;
+aftertimeofdayconstraint = 'after' aftertimeofdayconstraint:time;
 betweentimesofdayconstraint = ('between' @+:time 'and' @+:time)| ('from' @+:time 'to' @+:time);
 nintervalconstraint = ('every' integer intervals) | ('every' ordinal interval);
 intervalconstraint = ('every' interval);
@@ -73,7 +72,7 @@ weekdayconstraint  = ['every'] @+:weekday {[','] @+:weekday} [[',']'and'  @+:wee
 nthweekdayconstraint = ('the'|'on the'|'every') @+:ordinal @+:weekday 'of the month';
 
 #Directives
-startingat = ("starting" ['at'|'on'] @:datetimewithyear) |"starting" ["on"] weekday:weekday;
+startingat = ("starting" ['at'|'on'] @:datetimewithyear) |"starting on" weekday:weekday;
 
 #constants
 predefinedtime = "noon"| "midnight";

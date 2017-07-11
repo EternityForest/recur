@@ -106,8 +106,6 @@ class semantics():
     def nthweekdayconstraint(self, ast):
         return recur.NthWeekdayConstraint(parseOrdinal(ast[0]),parseWeekday(ast[1]))
 
-    def forconstraint(self,ast):
-        return recur.ForConstraint(ast[0], float(float(ast[2])*intervals[ast[3]]) )
 
     def nintervalconstraint(self, ast):
         n = parseOrdinal(ast[1])
@@ -178,13 +176,17 @@ class semantics():
         return c
 
     def and_constraint(self, ast):
+        f = ast.get("for",None)
         x = ast['allof']
         print(x,"and")
         c = x.pop()
         while x:
             c = c | x.pop()
             print(c)
-        return c
+        if f:
+            return recur.ForConstraint(c, float(float(f[0])*intervals[f[1]]) )
+        else:
+            return c
 
     def betweentimesofdayconstraint(self,ast):
         s = parseTime(ast[0])
