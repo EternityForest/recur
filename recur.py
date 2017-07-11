@@ -123,19 +123,26 @@ class ORConstraint(BaseConstraint):
         self.a = a
         self.b = b
 
-    def after(self, time, inclusive=True):
-        a = self.a.after(time, inclusive)
-        b = self.b.after(time, inclusive)
+    def after(self, time, inclusive=True,align=None):
+        a = self.a.after(time, inclusive,align)
+        b = self.b.after(time, inclusive,align)
         if a and b:
             return (a if a<b else b)
 
-    def before(self, time):
-        a = self.a.before(time, inclusive)
-        b = self.b.before(time, inclusive)
+    def before(self, time,align=None):
+        a = self.a.before(time, inclusive,align)
+        b = self.b.before(time, inclusive,align)
         if a and b:
             return (a if a>b else b)
 
-
+    def end(self, time, align=None):
+        if not time< self.after(time,align):
+            return time
+        a = self.a.end(time,align)
+        b = self.b.end(time,align)
+        if a and b:
+            return (a if a<=b else b)
+        return
 
 class ConstraintSystem(BaseConstraint):
     """Class defining one event that repeats at times determined by a set of constraints,
@@ -484,7 +491,6 @@ class startingat(BaseConstraint):
         return "<after "+str(self.time)+">"
 
     def after(self,dt, inclusive=True,align=None):
-        #If it is after the time return current if we are inclusive
         if dt >= self.time:
             if inclusive:
                 return self.time
@@ -503,7 +509,6 @@ class startingat(BaseConstraint):
         return datetime.datetime.max
 
 class dummy(BaseConstraint):
-    "Match a range of time that starts at a specific moment"
     def __init__(self,*dt):
         self.time = dt
         #Arbitrary large sort value

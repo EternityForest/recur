@@ -16,10 +16,10 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import recur_parser, recur
+from . import recur,recur_parser
 import datetime
-p = recur_parser.UnknownParser()
 
+p = recur_parser.parser
 
 def parseDateTimeWithYearWithDefaults(s):
     "This accepts lots and lots of default options for no real reason other than to handle the starting at alignments"
@@ -170,6 +170,7 @@ class semantics():
         return recur.startingat(self.align)
 
     def constraint_list(self, ast):
+        print(ast,"list")
         x = ast
         c = x.pop()
         while x:
@@ -178,9 +179,11 @@ class semantics():
 
     def and_constraint(self, ast):
         x = ast['allof']
+        print(x,"and")
         c = x.pop()
         while x:
             c = c | x.pop()
+            print(c)
         return c
 
     def betweentimesofdayconstraint(self,ast):
@@ -192,7 +195,15 @@ class semantics():
         else:
             #To deal with ranges that cross midnight, we say things from 6 till midnight OR from midnight till 3am
             return recur.aftertime(s) | recur.beforetime(e)
-
+    
+    def aftertimeofdayconstraint(self,ast):
+        s = parseTime(ast[0])
+        return recur.aftertime(*s)
+        
+    def beforetimeofdayconstraint(self,ast):
+        s = parseTime(ast[0])
+        return recur.aftertime(*s)     
+        
     def yeardayconstraint(self, ast):
         return recur.yearday(parseOrdinal(ast[1]))
 
@@ -212,6 +223,7 @@ d = datetime.datetime(2016,9,26)
 
 def getConstraint(c):
     s = semantics()
-    c= p.parse(c, rule_name="start",semantics =s )
+    c= p.parse(c, rule_name="start",semantics =s)
+    print(c)
     a = s.align if hasattr(s,"align") else None
     return recur.Selector(c, a)
