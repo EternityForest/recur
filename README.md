@@ -113,3 +113,25 @@ For the purpose of this constraint, a month is considered an interval. It will a
 
 #### Weekday
 `on <weekday>` will match the entirety of that day every week without regard to alignment.
+
+### The And operator
+You may wish to specify multiple times somethng should happen. To enable this, the and operator can be used as follows:
+
+`every day in june and every hour in july`
+
+### Duration
+You may wish to specify the length of an event. To do this, one uses the for operator as follows:
+
+`Every day at 2pm for five minutes`
+`Every three hours and every minute on tuesday for ten seconds`
+
+The for operator has lower precedence than and.
+
+### Parens
+
+Parens work as expected to override precedence.
+`every ten seconds (at 2pm for five minutes)`
+
+Runs at 2pm. 2:00:10PM, 2:00:20PM, etc, until 2:05PM.
+
+

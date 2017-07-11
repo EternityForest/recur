@@ -18,7 +18,7 @@
 import tatsu
 grammar = """
 @@left_recursion :: False
-start =and_constraint [syntax_error];
+start =for_statements [syntax_error];
 #Basic stuff to do with how constraints are combined
 atomic_constraint = intervalconstraint|nintervalconstraint|startingat|nthweekdayconstraint|weekdayconstraint|
                     monthdayconstraint|betweentimesofdayconstraint|yeardayconstraint|
@@ -26,8 +26,12 @@ atomic_constraint = intervalconstraint|nintervalconstraint|startingat|nthweekday
                     ('(' and_constraint ')')|except_constraint;
 
 syntax_error = /[.\w]+/;
+for_statements = and+:for_statement {'and' and+:for_statement};
+
+for_statement = c:and_constraint ["for" for:(integer (interval|intervals))];
+
 constraint_list = {atomic_constraint}+;
-and_constraint = allof+:constraint_list {['and'] allof+:constraint_list} ["for" for:(integer (interval|intervals))];
+and_constraint = allof+:constraint_list {['and'] allof+:constraint_list} ;
 except_constraint = 'except' atomic_constraint;
 
 
