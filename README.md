@@ -4,6 +4,8 @@ Recur is a Python library providing support for specifying recurring events with
 
 recur can find the next match for simple expressions in under 30 microseconds.
 
+recur depends on TatSu to handle the parsing.
+
 For example, `every 3 days at 3pm`
 is internally translated to a set of "constraint objects" where the first constraint is one that matches `every 3 day`and the second is one that matches 3pm on any given day. Events occur at times when all constraints match.
 
