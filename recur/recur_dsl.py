@@ -67,6 +67,9 @@ def parseTime(s):
     return datetime.time(
     int(s.hour)+ (12 if s.ampm =="pm" else 0), int(s.minute) if s.minute else 0, int(s.second) if s.second else 0, s.ms*1000 if s.ms else 0)
 
+def parseTimes(s):
+    return [parseTime(time) for time in s['times']]
+    
 def parseWeekday(s):
     try:
         return{
@@ -210,7 +213,12 @@ class semantics():
         
     def beforetimeofdayconstraint(self,ast):
         s = parseTime(ast[0])
-        return recur.aftertime(*s)     
+        return recur.aftertime(*s)  
+        
+    def timeofdayconstraint(self,ast):
+        print(ast,"sdfghjkljhgfdsaxdcvjkjhgfdsghj")
+        s = parseTimes(ast['timeofdayconstraint'])
+        return recur.time(*s)       
         
     def yeardayconstraint(self, ast):
         return recur.yearday(parseOrdinal(ast[1]))

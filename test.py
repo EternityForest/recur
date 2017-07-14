@@ -26,6 +26,15 @@ from recur.recur import *
 p = recur_parser.parser
 
 
+class Testtimeofday(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("at 10am")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,9,40))
+        y= datetime.datetime(2016,9,6,10,00)
+        self.assertEqual(x,y)
+
 
 class Testsyntaxerrors(unittest.TestCase):
     def setUp(self):
