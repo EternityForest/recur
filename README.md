@@ -4,7 +4,7 @@ Recur is a Python library providing support for specifying recurring events with
 
 recur can find the next match for simple expressions in under 30 microseconds.
 
-recur depends on TatSu to handle the parsing.
+recur depends on TatSu to handle the parsing, and using a constraint logic type system to select a set of time periods.
 
 For example, `every 3 days at 3pm`
 is internally translated to a set of "constraint objects" where the first constraint is one that matches `every 3 day`and the second is one that matches 3pm on any given day. Events occur at times when all constraints match.
@@ -98,6 +98,9 @@ For example `every 3 weeks` will match the entirety of every third week. By defa
 
 For the purpose of this constraint, a month is considered an interval. It will always use calendar months, and can be aligned. If the align point is past the end of a month, the last day of the month is used. For example `every month starting on Jan 30` will end on the 28th or 29th on leap years in February because there is no Feb 30.
 
+
+#### Month 
+`in January`, `in January and September`, etc match the entirity of those months.
 
 #### Day of year
 `on the <ordinal> day of the year` Will match the entirety of that calender day in the year, from midnight to midnight. Alignment has no effect on this constraint.

@@ -26,6 +26,41 @@ from recur.recur import *
 p = recur_parser.parser
 
 
+
+
+class Testbefore(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("before jun 20 2017")
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2017,2,6,9,40))
+        y= datetime.datetime(2017,2,6,9,40)
+        self.assertEqual(x,y)
+    def test_after(self):
+        x = self.d.after(datetime.datetime(2017,10,6,9,40))
+        y= None
+        self.assertEqual(x,y)
+
+class Testmidnight(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("at midnight")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,9,40))
+        y= datetime.datetime(2017,9,7,0,00)
+        self.assertEqual(x,y)
+
+
+
+class Testmidnight(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("at midnight")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,6,9,40))
+        y= datetime.datetime(2016,9,7,0,00)
+        self.assertEqual(x,y)
+
+
 class Testtimeofday(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("at 10am")
@@ -35,7 +70,46 @@ class Testtimeofday(unittest.TestCase):
         y= datetime.datetime(2016,9,6,10,00)
         self.assertEqual(x,y)
 
-
+class TestMonth(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("in february")
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,1,6,9,40))
+        y= datetime.datetime(2016,2,1,0,00)
+        self.assertEqual(x,y)
+    def test_before(self):
+        x = self.d.before(datetime.datetime(2016,4,6,9,40))
+        y= datetime.datetime(2016,2,1,0,00)
+        self.assertEqual(x,y)
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2016,1,6,9,40),inclusive=False)
+        y= datetime.datetime(2016,2,1,0,00)
+        self.assertEqual(x,y)
+    def test_end(self):
+        x = self.d.end(datetime.datetime(2016,2,6,9,40),inclusive=False)
+        y= datetime.datetime(2016,3,1,0,00)
+        self.assertEqual(x,y)
+        
+class TestMonthUpper(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("February")
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,1,6,9,40))
+        y= datetime.datetime(2016,2,1,0,00)
+        self.assertEqual(x,y)
+    def test_before(self):
+        x = self.d.before(datetime.datetime(2016,4,6,9,40))
+        y= datetime.datetime(2016,2,1,0,00)
+        self.assertEqual(x,y)
+    def test_exclusive(self):
+        x = self.d.after(datetime.datetime(2016,1,6,9,40),inclusive=False)
+        y= datetime.datetime(2016,2,1,0,00)
+        self.assertEqual(x,y)
+    def test_end(self):
+        x = self.d.end(datetime.datetime(2016,2,6,9,40),inclusive=False)
+        y= datetime.datetime(2016,3,1,0,00)
+        self.assertEqual(x,y)
+                           
 class Testsyntaxerrors(unittest.TestCase):
     def setUp(self):
         pass
@@ -128,6 +202,17 @@ class Testforminutes(unittest.TestCase):
         x = self.d.end(datetime.datetime(2016,9,6,2,15,6))
         y= datetime.datetime(2016,9,6,2,15,10)
         self.assertEqual(x,y)
+
+
+class Testaligndatedaysuppercase(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("every 6 days starting on september 6 2016 at 2:15PM")
+
+    def test_before_almost_there(self):
+        x = self.d.before(datetime.datetime(2016,10,6,2,12))
+        y= datetime.datetime(2016,9,6,2,15)
+        self.assertEqual(x,y)
+
 
 class Testaligndatedays(unittest.TestCase):
     def setUp(self):
@@ -520,6 +605,16 @@ class Teststringweeks(unittest.TestCase):
         x = self.d.after(datetime.datetime(2016,10,3,1,9),False)
         y= datetime.datetime(2016,10,10)
         self.assertEqual(x,y)
+
+class Testonweekday(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("on thursday")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,9,28,1,9))
+        y= datetime.datetime(2016,9,29)
+        self.assertEqual(x,y)
+
 
 class Teststringweekdays(unittest.TestCase):
     def setUp(self):

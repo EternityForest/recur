@@ -77,10 +77,11 @@ def daysInMonth(dt):
     return [31, 29 if y%4==0 and not y%400==0 else 28,31,30,31,30,31,31,30,31,30,31][m-1]
 
 class Selector():
-    def __init__(self,constraint, align=None):
+    def __init__(self,constraint, align=None,tz=None):
         "Encapsulates both a selector and it's start time alignments"
         self.constraint=constraint
         self.align = align
+        self.tz = tz
 
     def before(self,dt):
         return self.constraint.before(dt,self.align)
@@ -508,6 +509,34 @@ class startingat(BaseConstraint):
     def end(self,dt,align=None):
         return datetime.datetime.max
 
+class endingat(BaseConstraint):
+    "Match a range of time that ends at a specific moment"
+    def __init__(self,dt):
+        self.time = dt
+        #Arbitrary large sort value
+        self.sort = 24*60*60*356*10
+
+    def __repr__(self):
+        return "<endingat "+str(self.time)+">"
+
+    def after(self,dt, inclusive=True,align=None):
+        if not inclusive:
+            return None
+        if dt > self.time:
+            return None
+ 
+        return dt
+
+    def before(self,dt,align=None):
+        #If it is after the time return current if we are inclusive
+        if dt >= self.time:
+            return self.time
+        else:
+            return None
+
+    def end(self,dt,align=None):
+        return datetime.datetime.max
+
 class dummy(BaseConstraint):
     def __init__(self,*dt):
         self.time = dt
@@ -558,6 +587,37 @@ class yearly(BaseConstraint):
     def end(self,dt,align=None):
         aligndt = align if align else day1
         return self.after(dt,True,align).replace(year=dt.year+1)
+        
+class month(BaseConstraint):
+    "Matches a list of months in the year"
+    def __init__(self,months):
+        "Match every nth month"
+        self.months = months
+        self.sort = (60*60*24*30)/len(months)
+
+    def after(self,dt, inclusive=True, align = None):
+        if inclusive:
+            if dt.month in self.months:
+                return dt
+
+        while not dt.month in self.months:
+            dt = monthdelta(dt,1)
+        return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1)
+
+    def before(self, dt, align=None):
+        dt = monthdelta(dt,-1)
+        while not dt.month in self.months:
+            dt = monthdelta(dt,-1)
+        return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1)
+    def end(self,dt,align=None):
+        while dt.month in self.months:
+            dt = monthdelta(dt,1)
+        return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1)
+    def end(self,dt,align=None):
+        while dt.month in self.months:
+            dt = monthdelta(dt,1)
+        return dt.replace(microsecond=0,second=0,minute=0,hour=0,day=1)
+
 
 ##Warning: all of  these -ly constraints are copy-pasted variants of one another, using not very clean code that was developed incrementally
 ##With a lot of trial and error. The only way these can be trusted in any way is with tons of unit tests.

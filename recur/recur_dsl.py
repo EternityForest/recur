@@ -17,7 +17,7 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import recur,recur_parser
-import datetime
+import datetime,pytz
 
 p = recur_parser.parser
 
@@ -64,8 +64,12 @@ intervals = {
 }
 def parseTime(s):
     "Given the AST for a strng like 4:45pm, return a datetime.time"
+    if s == "midnight":
+      return datetime.time(0,0,0)
+    if s== "noon":
+      return datetime.time(12,0,0)
     return datetime.time(
-    int(s.hour)+ (12 if s.ampm =="pm" else 0), int(s.minute) if s.minute else 0, int(s.second) if s.second else 0, s.ms*1000 if s.ms else 0)
+    int(s.hour)+ (12 if s.ampm in ['PM',"pm"] else 0), int(s.minute) if s.minute else 0, int(s.second) if s.second else 0, s.ms*1000 if s.ms else 0)
 
 def parseTimes(s):
     return [parseTime(time) for time in s['times']]
@@ -173,28 +177,36 @@ class semantics():
             raise ValueError("Cannot have multiple alignment points in a string, already set to "+str(self.align))
         self.align = x
         return recur.startingat(self.align)
+        
+    def timezone(self,ast):
+        self.tz = ast
+
 
     def constraint_list(self, ast):
         x = ast
         c = x.pop()
         while x:
-            c = c & x.pop()
+            y = x.pop()
+            if y:
+                c = c & y
         return c
         
     def for_statements(self, ast):
         x = ast['and']
         c = x.pop()
         while x:
-            c = c | x.pop()
-            print(c)
+            y = x.pop()
+            if y:
+                c = c | y
         return c
         
     def and_constraint(self, ast):
         x = ast['allof']
         c = x.pop()
         while x:
-            c = c | x.pop()
-            print(c)
+            y = x.pop()
+            if y:
+                c = c | y
         return c
 
     def betweentimesofdayconstraint(self,ast):
@@ -213,8 +225,12 @@ class semantics():
         
     def beforetimeofdayconstraint(self,ast):
         s = parseTime(ast[0])
-        return recur.aftertime(*s)  
+        return recur.aftertime(*s)
         
+    def beforetimeconstraint(self,ast):
+        s = parseDateTimeWithYearWithDefaults(ast['before'])
+        return recur.endingat(s)  
+           
     def timeofdayconstraint(self,ast):
         print(ast,"sdfghjkljhgfdsaxdcvjkjhgfdsghj")
         s = parseTimes(ast['timeofdayconstraint'])
@@ -222,7 +238,9 @@ class semantics():
         
     def yeardayconstraint(self, ast):
         return recur.yearday(parseOrdinal(ast[1]))
-
+    def monthconstraint(self, ast):
+        return recur.month([parseMonth(i) for i in ast])
+        
     def monthdayconstraint(self,ast):
         l = []
         for i in ast:
@@ -238,8 +256,14 @@ class semantics():
 d = datetime.datetime(2016,9,26)
 
 def getConstraint(c):
+    c0 = c[0].lower()
+    c = c0+c[1:]
     s = semantics()
+    s.tz = None
     c= p.parse(c, rule_name="start",semantics =s)
     print(c)
     a = s.align if hasattr(s,"align") else None
-    return recur.Selector(c, a)
+    if s.tz:
+        import pytz
+    tz = pytz.timezone(s.tz) if s.tz else None
+    return recur.Selector(c, a,tz)
