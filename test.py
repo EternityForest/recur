@@ -109,7 +109,21 @@ class TestMonthUpper(unittest.TestCase):
         x = self.d.end(datetime.datetime(2016,2,6,9,40),inclusive=False)
         y= datetime.datetime(2016,3,1,0,00)
         self.assertEqual(x,y)
-                           
+
+
+
+class TestFiveMinutes(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_almost(self):
+        d= getConstraint("every five minutes")
+        print(d.constraint,d.constraint.interval,d.align)
+        x = d.after(datetime.datetime(2016,1,6  ,9,37))
+        y= datetime.datetime(2016,1,6  ,9,40)
+        self.assertEqual(x,y)
+
+
 class Testsyntaxerrors(unittest.TestCase):
     def setUp(self):
         pass
