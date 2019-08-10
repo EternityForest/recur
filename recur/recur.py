@@ -224,6 +224,9 @@ class ConstraintSystem(BaseConstraint):
             for i in self.constraints:
                 #Get either next occurance or start of this occurance
                 t = i.after(time,inclusive=True,align=align)
+                
+                if t==None:
+                    return None
                 #We check if time is less than or equal to t because constraints return the start of
                 #A time period if the time given is within an occurance if inclusive is true
                 if not t<=time:
@@ -315,7 +318,7 @@ class ForConstraint(BaseConstraint):
             return x+datetime.timedelta(seconds=self.length)
 
     def before(self, dt, align=None):
-        return selt.constraint.before(dt)
+        return self.constraint.before(dt)
 
 class weekday(BaseConstraint):
     "Match one day or list of days in every week"
