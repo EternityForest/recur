@@ -95,13 +95,13 @@ startingat = ("starting" ['at'|'on'] @:datetimewithyear) |"starting on" weekday:
 
 if __name__ == "__main__":
     #Run as main to build precompiled
-    with open("compiledparser.py","w") as f:
+    with open(os.path.join(os.path.dirname(__file__),"compiledparser.py"),"w") as f:
         f.write(tatsu.to_python_sourcecode(grammar))
 else:
     try:
         #If this file has been changed don't use the old cache
         if os.path.exists("compiledparser.py") and os.path.getmtime(__file__)< os.path.getmtime("compiledparser.py"):
-            from compiledparser import UnknownParser as parser
+            from . compiledparser import UnknownParser as parser
             parser = parser()
         else:
             parser = tatsu.compile(grammar)

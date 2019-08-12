@@ -24,7 +24,7 @@ import time as tt
 from recur.recur_dsl import *
 from recur.recur import *
 p = recur_parser.parser
-
+from recur import getConstraint
 
 
 
