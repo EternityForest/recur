@@ -70,6 +70,26 @@ class Testtimeofday(unittest.TestCase):
         y= datetime.datetime(2016,9,6,10,00)
         self.assertEqual(x,y)
 
+
+class testdate(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("Jan 01")
+
+    def test_there(self):
+        x = self.d.after(datetime.datetime(2016,1,1),True)
+        y= datetime.datetime(2016,1,1)
+        self.assertEqual(x,y)
+
+class testdate2(unittest.TestCase):
+    def setUp(self):
+        self.d = getConstraint("the 3rd of January")
+
+    def test_not_there(self):
+        x = self.d.after(datetime.datetime(2016,1,1),True)
+        y= datetime.datetime(2016,1,3)
+        self.assertEqual(x,y)
+
+
 class TestMonth(unittest.TestCase):
     def setUp(self):
         self.d = getConstraint("in february")
