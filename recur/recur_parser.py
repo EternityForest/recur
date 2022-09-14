@@ -44,8 +44,8 @@ predefinedtime = "noon"| "midnight";
 timeinterval = number ("seconds" | "minutes" |"hours" | "days" | "weeks");
 number = /\d+[\.]\d+/;
 integer = /\d+/;
-ordinal = 'first'|'second'|'third'|'1st'|'2nd'|'3rd'|'other'|/\d\d?th/;
-ordinal_noother = 'first'|'second'|'third'|'1st'|'2nd'|'3rd'|'other'|/\w*\d\d?th/;
+ordinal = 'first'|'second'|'third'|'1st'|'2nd'|'3rd'|'other'|/\d\d?th/|/\d\d/;
+ordinal_noother = 'first'|'second'|'third'|'1st'|'2nd'|'3rd'|/\w*\d\d?th/|/\d\d/;
 
 enumber = 'one'|'two'|'three'|'four'|'five'|'six'|'seven' | 'eight' | 'nine' | 'ten';
 
