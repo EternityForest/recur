@@ -1,5 +1,8 @@
 # recur: Fast Recurring Events for Python
 
+NOTE: This is now abandonware unless someone else would like to pick it up. Recurrent+Dateutil is Fast Enough, this had a few bugs, and I'd rather focus on application develop than maintain wheel reinventions.
+
+
 Recur is a Python library providing support for specifying recurring events with a plain English like syntax using the Grako PEG parser generator.
 
 recur can find the next match for simple expressions in under 30 microseconds.
